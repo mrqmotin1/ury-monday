@@ -70,6 +70,9 @@
     "title": "Paiement",
     "apply_discount": "Appliquer une remise",
     "discount_placeholder": "Entrer %",
+    "discount_type_percent": "%",
+    "discount_type_amount": "Montant",
+    "discount_amount_placeholder": "Entrer le montant",
     "payment_methods": "Modes de paiement",
     "amount_placeholder": "Montant",
     "total_entered": "Total saisi",
@@ -207,6 +210,8 @@
     "print_failed": "Échec d'impression : {{reason}}",
     "invalid_discount": "Veuillez entrer une valeur de remise valide",
     "discount_exceeds_max": "La remise en pourcentage ne peut pas dépasser 100 %",
+    "discount_exceeds_total": "La remise ne peut pas dépasser le total de l'addition",
+    "discount_exceeds_limit": "La remise ne peut pas dépasser {{max}} % pour ce profil POS",
     "please_print_first": "Veuillez imprimer la facture avant d'effectuer le paiement",
     "enter_cancel_reason": "Veuillez entrer un motif d'annulation.",
     "dine_in_restricted": "La consommation sur place n'est pas disponible pour votre rôle",
@@ -400,5 +405,17 @@
     "paid": "Payé",
     "consolidated": "Consolidé",
     "return": "Retour"
+  },
+  "discount": {
+    "title": "Remise sur la commande",
+    "applied": "Remise appliquée",
+    "removed": "Remise supprimée",
+    "failed": "Impossible de mettre à jour la remise",
+    "remove": "Supprimer",
+    "bill_total": "Total de l'addition",
+    "new_total": "Nouveau total",
+    "max_note": "Maximum autorisé : {{max}} %",
+    "printed_note": "L'addition est déjà imprimée. Seul un responsable peut modifier la remise, et l'addition doit être réimprimée avant le paiement.",
+    "button": "Remise"
   }
 }

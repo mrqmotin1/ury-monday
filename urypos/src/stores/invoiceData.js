@@ -52,6 +52,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
     kotPrinting: false,
     editOrderType:false,
     enableDiscount: false,
+    maxDiscount: 0,
     invoiceUpdating: false,
     cancelInvoiceFlag: false,
     invoiceDetails: [],
@@ -89,6 +90,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
           this.paidLimit = this.invoiceDetails.paid_limit;
           this.disableRoundedTotal = this.invoiceDetails.disable_rounded_total;
           this.enableDiscount = this.invoiceDetails.enable_discount;
+          this.maxDiscount = this.invoiceDetails.max_discount || 0;
           this.enableKotReprint=this.invoiceDetails.enable_kot_reprint;
           this.multipleCashier=this.invoiceDetails.multiple_cashier
           this.editOrderType=this.invoiceDetails.edit_order_type

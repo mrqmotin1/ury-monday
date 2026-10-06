@@ -731,6 +731,7 @@ def getPosProfile():
         print_format = pos_profiles.print_format
         paid_limit=pos_profiles.paid_limit
         enable_discount = pos_profiles.custom_enable_discount
+        max_discount = pos_profiles.get("custom_max_discount_percentage") or 0
         multiple_cashier = pos_profiles.custom_enable_multiple_cashier
         edit_order_type = pos_profiles.custom_edit_order_type
         enable_kot_reprint = pos_profiles.custom_enable_kot_reprint
@@ -810,6 +811,7 @@ def getPosProfile():
         "paid_limit":paid_limit,
         "disable_rounded_total":disable_rounded_total,
         "enable_discount":enable_discount,
+        "max_discount":max_discount,
         "multiple_cashier":multiple_cashier,
         "owner":owner,
         "edit_order_type":edit_order_type,

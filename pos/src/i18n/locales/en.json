@@ -70,6 +70,9 @@
     "title": "Payment",
     "apply_discount": "Apply Discount",
     "discount_placeholder": "Enter %",
+    "discount_type_percent": "%",
+    "discount_type_amount": "Amount",
+    "discount_amount_placeholder": "Enter amount",
     "payment_methods": "Payment Methods",
     "amount_placeholder": "Amount",
     "total_entered": "Total Entered",
@@ -234,6 +237,8 @@
     "print_failed": "Print failed: {{reason}}",
     "invalid_discount": "Please enter a valid discount value",
     "discount_exceeds_max": "Percentage discount cannot exceed 100%",
+    "discount_exceeds_total": "Discount cannot be more than the bill total",
+    "discount_exceeds_limit": "Discount cannot exceed {{max}}% for this POS Profile",
     "please_print_first": "Please print invoice before making payment",
     "enter_cancel_reason": "Please enter a reason for cancellation.",
     "dine_in_restricted": "Dine In is not available for your role",
@@ -427,5 +432,17 @@
     "paid": "Paid",
     "consolidated": "Consolidated",
     "return": "Return"
+  },
+  "discount": {
+    "title": "Order Discount",
+    "applied": "Discount applied",
+    "removed": "Discount removed",
+    "failed": "Could not update the discount",
+    "remove": "Remove",
+    "bill_total": "Bill total",
+    "new_total": "New total",
+    "max_note": "Maximum allowed: {{max}}%",
+    "printed_note": "The bill is already printed. Only a manager can change the discount, and the bill must be printed again before payment.",
+    "button": "Discount"
   }
 }

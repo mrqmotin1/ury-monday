@@ -90,6 +90,7 @@ const buildCapabilityProfileShim = (
     tableAttention: 0,
     disable_rounded_total: 0,
     enable_discount: 0,
+    max_discount: 0,
     multiple_cashier: profile?.custom_enable_multiple_cashier ? 1 : 0,
     remove_items: profile?.remove_items ? 1 : 0,
     show_image: profile?.show_image ? 1 : 0,

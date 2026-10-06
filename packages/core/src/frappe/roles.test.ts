@@ -54,6 +54,7 @@ const baseProfile: PosProfileCombined = {
   tableAttention: 0,
   disable_rounded_total: 0,
   enable_discount: 0,
+  max_discount: 0,
   multiple_cashier: 0,
   remove_items: 1,
   show_image: 1,

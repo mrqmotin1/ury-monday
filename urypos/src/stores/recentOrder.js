@@ -36,6 +36,8 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
     timer: null,
     orderType: null,
     percentage: null,
+    // "Percentage" or "Amount": how `percentage` (the entered value) is read.
+    discountType: "Percentage",
     searchTimer: null,
     postingDate: null,
     modifiedTime: null,
@@ -95,9 +97,16 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
         return "New";
       }
     },
+    // The discount is saved on the order (apply_order_discount), so grandTotal
+    // already includes it.
     totalAmount() {
-      this.totalPercentage = this.grandTotal - (this.percentage / 100) * this.grandTotal;
+      this.totalPercentage = Number(this.grandTotal) || 0;
       return this.totalPercentage.toFixed(3);
+    },
+    discountLabel() {
+      if (Number(this.additionalPiscountPercentage) > 0) return `${Number(this.additionalPiscountPercentage)}%`;
+      if (Number(this.discountAmount) > 0) return `${this.invoiceData.currency || ""} ${Number(this.discountAmount)}`.trim();
+      return "";
     },
   },
   actions: {
@@ -231,6 +240,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
       this.additionalPiscountPercentage = null
       this.discountAmount = null
       this.percentage = ""
+      this.discountType = "Percentage"
       this.showDiscount = false
       this.showInput= false
       if (recentOrder.name === this.invoiceNumber) return;
@@ -244,6 +254,7 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
       this.invoiceNumber = recentOrder.name;
       this.additionalPiscountPercentage = recentOrder.additional_discount_percentage
       this.discountAmount = recentOrder.discount_amount
+      this.showDiscount = Number(recentOrder.discount_amount) > 0
       this.selectedOrder = recentOrder;
       this.selectedTable = recentOrder.restaurant_table;
       const dateTimeString = `${recentOrder.posting_date}`;
@@ -352,6 +363,47 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
     showInputBox() {
       this.showInput = true;
       this.showDiscount = false;
+    },
+
+    // Save the bill discount on the order BEFORE printing, so the printed bill
+    // shows it and payment uses the discounted total. 0 / empty removes it.
+    async applyDiscount() {
+      const value = parseFloat(this.percentage) || 0;
+      try {
+        const res = await this.call.post(
+          "ury.ury.doctype.ury_order.ury_order.apply_order_discount",
+          {
+            invoice: this.invoiceNumber,
+            discount_value: value,
+            discount_type: this.discountType,
+          }
+        );
+        const r = res.message;
+        this.additionalPiscountPercentage = r.additional_discount_percentage;
+        this.discountAmount = r.discount_amount;
+        this.grandTotal =
+          this.invoiceData.disableRoundedTotal === 1 ? r.grand_total : r.rounded_total;
+        this.invoicePrinted = r.invoice_printed;
+        if (this.selectedOrder) Object.assign(this.selectedOrder, r);
+        this.showInput = false;
+        this.showDiscount = Number(r.discount_amount) > 0;
+        this.notification.createNotification(value > 0 ? "Discount applied" : "Discount removed");
+      } catch (error) {
+        let message = "Could not update the discount";
+        if (error?._server_messages) {
+          try {
+            message = JSON.parse(JSON.parse(error._server_messages)[0]).message;
+          } catch {
+            // keep the generic message
+          }
+        }
+        this.alert.createAlert("Message", message, "OK");
+      }
+    },
+
+    setDiscountType(type) {
+      this.discountType = type;
+      this.percentage = "";
     },
 
     toggleDiscount() {
@@ -508,13 +560,13 @@ export const usetoggleRecentOrder = defineStore("recentOrders", {
         cashier: this.invoiceData.cashier,
         payments: this.payments,
         pos_profile: this.posProfile,
-        additionalDiscount: this.percentage
       };
       let pay = this.payments;
       let amount = pay.reduce((total, obj) => obj.amount + total, 0);
       let r_total = this.grandTotal;
       let diff = r_total - amount;
-      if (diff > 5 && !this.percentage) {
+      // The discount is already on the invoice (set before printing).
+      if (diff > 5) {
         this.alert.createAlert("Message", "Round Off Limit Exceeded", "OK");
         this.isLoading = false;
       } else {

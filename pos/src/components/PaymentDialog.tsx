@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Percent, Coins } from 'lucide-react';
+import { X, Coins } from 'lucide-react';
 import { usePOSStore } from '../store/pos-store';
 import { formatCurrency, call, parseFrappeError } from '@ury/core';
 import { Button, Input, Dialog, DialogContent, showToast } from '@ury/ui';
@@ -40,20 +40,12 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   discountPercentage,
   discountAmount
 }) => {
-  const { paymentModes, fetchPaymentModes, posProfile: storePosProfile } = usePOSStore();
+  const { paymentModes, fetchPaymentModes } = usePOSStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [discountType] = useState<'percentage'>('percentage'); // Only percentage now
-  
-  // Calculate effective percentage if only amount is provided (for invoice-level discounts)
-  const effectivePercentage = discountPercentage 
-    ? discountPercentage 
-    : (discountAmount && grandTotal + discountAmount > 0 
-        ? (discountAmount / (grandTotal + discountAmount)) * 100 
-        : 0);
-        
-  const [discountValue, setDiscountValue] = useState<string>(effectivePercentage > 0 ? String(effectivePercentage) : '');
-  const [appliedDiscount, setAppliedDiscount] = useState<number>(discountAmount || 0); // Only tracking transaction discount!
+  // The bill discount is set on the order before printing (DiscountDialog);
+  // here it is shown read-only and already included in grandTotal.
+  const appliedDiscount = Number(discountAmount) || 0;
   const [paymentInputs, setPaymentInputs] = useState<{ [mode: string]: string }>({});
 
   useEffect(() => {
@@ -63,30 +55,14 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
   // baseTotal represents the amount before any invoice-level discount (like pricing rule or manual discount)
   const baseTotal = grandTotal + (discountAmount || 0);
 
-  const handleApplyDiscount = () => {
-    const value = parseFloat(discountValue);
-    if (isNaN(value) || value <= 0) {
-      setError(t('errors.invalid_discount'));
-      return;
-    }
-    if (value > 100) {
-      setError(t('errors.discount_exceeds_max'));
-      return;
-    }
-    const calculatedDiscount = (baseTotal * value) / 100;
-    setAppliedDiscount(calculatedDiscount);
-    setError(null);
-  };
-
   // Order summary logic
   const subtotal = baseTotal;
   const adjustment = roundedTotal - grandTotal;
   const roundedAdjustment = Math.round(adjustment * 100) / 100;
   const showAdjustment = Math.abs(roundedAdjustment) > 0.001;
-  const totalDiscount = appliedDiscount;
-  const discountedTotal = Math.max(0, subtotal - totalDiscount);
-  // If discount is applied, round up; else, round normally
-  const finalTotal = appliedDiscount > 0 ? Math.ceil(discountedTotal) : Math.round(discountedTotal);
+  const discountedTotal = grandTotal;
+  // Pay exactly what the printed bill shows (the invoice's rounded total).
+  const finalTotal = roundedTotal || Math.round(grandTotal);
 
   // Calculate split payment total
   const payments = paymentModes
@@ -142,7 +118,6 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
     setError(null);
     try {
       await call.post('ury.ury.doctype.ury_order.ury_order.make_invoice', {
-        additionalDiscount: appliedDiscount > 0 ? appliedDiscount : null,
         cashier,
         customer,
         invoice,
@@ -182,32 +157,6 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
           </div>
 
           {/* Discount Section (conditional) */}
-          {storePosProfile?.enable_discount === 1 && (
-            <div className="space-y-4 mb-6">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Percent className="w-5 h-5" />
-                {t('payment.apply_discount')}
-              </h3>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(e.target.value)}
-                  placeholder={t('payment.discount_placeholder')}
-                  size="sm"
-                  className="flex-1"
-                />
-                <Button
-                  onClick={handleApplyDiscount}
-                  variant="default"
-                  size="sm"
-                >
-                  {t('common.apply')}
-                </Button>
-              </div>
-            </div>
-          )}
-
           {/* Payment Methods Section - Split Payment */}
           <div className="space-y-4 mb-6">
             <h3 className="text-lg font-semibold">{t('payment.payment_methods')}</h3>
@@ -285,7 +234,10 @@ const PaymentDialog: React.FC<PaymentDialogProps> = ({
               {/* Discount */}
               {appliedDiscount > 0 && (
                 <div className="flex justify-between text-green-600">
-                  <span>{t('payment.discount')}</span>
+                  <span>
+                    {t('payment.discount')}
+                    {Number(discountPercentage) > 0 && ` (${Number(discountPercentage)}%)`}
+                  </span>
                   <span>-{formatCurrency(appliedDiscount)}</span>
                 </div>
               )}

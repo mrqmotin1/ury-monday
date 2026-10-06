@@ -186,7 +186,7 @@ All frontends are served as Frappe web pages. Route rules in `hooks.py` (`websit
 - Thermal printing uses QZ Tray (desktop app). The POS sends signed print jobs.
 - Signing is server-side (`ury.ury.api.ury_print.signature_promise`, certificate via `qz_certificate_pem`). Cert/key source order: **URY QZ Settings** upload (Single doctype, private files, validated) → site_config `qz_cert` / `qz_private_key` (PEM or path under site `private/`) → File list `qz-certificate.txt` / `qz-private-key.pem` (mon-develop-3 convention). Admin UI: POS Profile → Print Settings → QZ Certificate card (upload, status, download .crt).
 - Per POS Profile: `qz_print` (enable), `qz_host` (PC running QZ Tray, default `localhost`), `custom_qz_printer` (Select "POS Printer", options filled from QZ by `public/js/pos_profile_qz.js` on desk and the admin Detect button; blank = that PC's default), `print_format` (receipt layout).
-- Raw vs HTML is decided by the print format: `get_qz_print_data` returns raw commands when the Print Format has "Raw Printing" checked (sent with `forceRaw`), else HTML. Shipped raw ESC/POS format: **URY POS Receipt (Raw)** (48 col / 80 mm; set `W = 32` for 58 mm). Desk (`public/js/pos_print.js`) and React POS (`@ury/core` `print/qz.ts`) follow the same rules.
+- Raw vs HTML is decided by the print format: `get_qz_print_data` returns raw commands when the Print Format has "Raw Printing" checked (sent with `forceRaw`), else HTML. Shipped raw ESC/POS format: **URY KOT (Raw)** for kitchen tickets (48 col / 80 mm; set `W = 32` for 58 mm); receipts use the site's own raw format (e.g. `raw-pos-invoice`). Desk (`public/js/pos_print.js`) and React POS (`@ury/core` `print/qz.ts`) follow the same rules.
 
 ---
 

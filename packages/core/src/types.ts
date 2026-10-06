@@ -52,6 +52,7 @@ export interface PosProfileCombined {
   tableAttention: number;
   disable_rounded_total: number;
   enable_discount: number;
+  max_discount: number;
   multiple_cashier: number;
   edit_order_type?: number;
   view_all_status?: number;

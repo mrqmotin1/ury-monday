@@ -5,7 +5,7 @@ import json
 import frappe
 from frappe import _
 from frappe.model.document import Document
-from frappe.utils import flt
+from frappe.utils import cint, flt
 from erpnext.controllers.queries import item_query
 from ury.ury_pos.api import getBranch, getBranchRoom, getRoom, posOpening
 from ury.ury.api.ury_kot_generate import kot_execute
@@ -1941,19 +1941,25 @@ def cancel_order(invoice_id, reason):
 
 # Roles permitted to authorize an additional discount when settling an order.
 DISCOUNT_ALLOWED_ROLES = frozenset(
-    {"URY Manager", "URY Cashier", "System Manager", "Administrator"}
+    {"URY Manager", "URY Cashier", "URY Admin", "System Manager", "Administrator"}
 )
 MAX_DISCOUNT_PERCENTAGE = 100
+DISCOUNT_TYPES = ("Percentage", "Amount")
 
 
-def _validate_additional_discount(additional_discount, pos_profile):
+def _validate_additional_discount(additional_discount, pos_profile, discount_type="Percentage"):
     """Server-side authorization for the discount applied in make_invoice.
 
     The client-side gate (POS Profile "Enable Discount" checkbox) is only a
-    UI convenience; this check is authoritative. Returns the sanitized
-    discount percentage (0 when no discount is applied). Raises before any
-    invoice state is mutated on failure.
+    UI convenience; this check is authoritative. `additional_discount` is a
+    percentage or a fixed amount depending on `discount_type`. Returns the
+    sanitized value (0 when no discount is applied). Raises before any
+    invoice state is mutated on failure. The POS Profile maximum is checked
+    after totals are calculated (see _check_discount_limit).
     """
+    if discount_type not in DISCOUNT_TYPES:
+        frappe.throw(_("Invalid discount type: {0}").format(discount_type))
+
     if additional_discount in (None, ""):
         return 0
 
@@ -1976,7 +1982,7 @@ def _validate_additional_discount(additional_discount, pos_profile):
             frappe.PermissionError,
         )
 
-    if discount > MAX_DISCOUNT_PERCENTAGE:
+    if discount_type == "Percentage" and discount > MAX_DISCOUNT_PERCENTAGE:
         frappe.throw(
             _("Discount of {0}% exceeds the maximum allowed discount of {1}%.").format(
                 discount, MAX_DISCOUNT_PERCENTAGE
@@ -1992,10 +1998,101 @@ def _validate_additional_discount(additional_discount, pos_profile):
     return discount
 
 
+def _check_discount_limit(invoice, pos_profile):
+    """Reject a discount above the POS Profile "Max Discount (%)" (blank/0 =
+    100%) or above the bill itself. Amount discounts are compared as % of the
+    bill before discount."""
+    discount_amount = flt(invoice.discount_amount)
+    if discount_amount <= 0:
+        return
+
+    bill_before_discount = flt(invoice.grand_total) + discount_amount
+    if discount_amount > bill_before_discount:
+        frappe.throw(
+            _("Discount {0} is more than the bill total {1}.").format(
+                discount_amount, bill_before_discount
+            )
+        )
+
+    max_discount = flt(
+        frappe.db.get_value("POS Profile", pos_profile, "custom_max_discount_percentage")
+    ) or MAX_DISCOUNT_PERCENTAGE
+    effective = discount_amount / bill_before_discount * 100 if bill_before_discount else 0
+    # Small tolerance for rounding of percentage discounts.
+    if effective > max_discount + 0.01:
+        frappe.throw(
+            _("Discount of {0}% exceeds the maximum allowed discount of {1}% for this POS Profile.").format(
+                flt(effective, 2), flt(max_discount, 2)
+            )
+        )
+
+
+# Roles that may change a discount after the bill has been printed.
+DISCOUNT_OVERRIDE_ROLES = frozenset({"URY Manager", "System Manager", "Administrator"})
+
+
+def _set_invoice_discount(invoice, discount, discount_type, pos_profile):
+    """Put a validated discount (from _validate_additional_discount) on a draft
+    invoice; 0 removes it. Caller recalculates totals."""
+    if discount and discount_type == "Amount":
+        invoice.additional_discount_percentage = 0
+        invoice.apply_discount_on = (
+            frappe.db.get_value("POS Profile", pos_profile, "apply_discount_on") or "Grand Total"
+        )
+        invoice.discount_amount = discount
+    elif discount:
+        invoice.additional_discount_percentage = discount
+    else:
+        invoice.additional_discount_percentage = 0
+        invoice.discount_amount = 0
+
+
+@frappe.whitelist()
+def apply_order_discount(invoice, discount_value=None, discount_type="Percentage"):
+    """Set (or remove, with an empty/0 value) the bill discount on a draft
+    order BEFORE the bill is printed, so the printed bill shows it and payment
+    simply uses the discounted total. Once printed, only a manager may change
+    it, and the bill must then be printed again before payment."""
+    discount_type = discount_type or "Percentage"
+    doc = frappe.get_doc("POS Invoice", invoice)
+
+    if doc.docstatus != 0:
+        frappe.throw(_("Discount can only be changed on an unpaid order."))
+    if not frappe.has_permission("POS Invoice", "write", doc=doc):
+        frappe.throw(_("Not permitted to change this order"), frappe.PermissionError)
+
+    printed = cint(doc.invoice_printed) == 1
+    if printed and not DISCOUNT_OVERRIDE_ROLES.intersection(frappe.get_roles()):
+        frappe.throw(
+            _("The bill is already printed. Ask a manager to change the discount."),
+            frappe.PermissionError,
+        )
+
+    discount = _validate_additional_discount(discount_value, doc.pos_profile, discount_type)
+    _set_invoice_discount(doc, discount, discount_type, doc.pos_profile)
+    doc.calculate_taxes_and_totals()
+    _check_discount_limit(doc, doc.pos_profile)
+
+    if printed:
+        # Printed bill no longer matches: payment waits for a reprint.
+        doc.invoice_printed = 0
+    doc.save()
+
+    return {
+        "name": doc.name,
+        "additional_discount_percentage": doc.additional_discount_percentage,
+        "discount_amount": doc.discount_amount,
+        "grand_total": doc.grand_total,
+        "rounded_total": doc.rounded_total,
+        "invoice_printed": doc.invoice_printed,
+    }
+
+
 # Method for URY POS
 @frappe.whitelist()
-def make_invoice(customer, payments, cashier, pos_profile,owner, additionalDiscount=None, table=None, invoice=None):
-    additionalDiscount = _validate_additional_discount(additionalDiscount, pos_profile)
+def make_invoice(customer, payments, cashier, pos_profile,owner, additionalDiscount=None, table=None, invoice=None, discount_type="Percentage"):
+    discount_type = discount_type or "Percentage"
+    additionalDiscount = _validate_additional_discount(additionalDiscount, pos_profile, discount_type)
 
     order_type =  invoice_name = frappe.get_value("POS Invoice",invoice , "order_type")
     invoice = get_order_invoice(table, invoice, order_type, "Payments")
@@ -2006,26 +2103,18 @@ def make_invoice(customer, payments, cashier, pos_profile,owner, additionalDisco
 
     invoice.customer = customer
     invoice.pos_profile = pos_profile
-    
-    if additionalDiscount:
-        discount_val = frappe.utils.flt(additionalDiscount)
-        if discount_val < 0 or discount_val > 100:
-            frappe.throw(_("Discount percentage must be between 0 and 100"))
-        
-        pos_prof = frappe.get_cached_doc("POS Profile", pos_profile)
-        if not pos_prof.get("allow_discount_change") and not pos_prof.get("custom_enable_discount"):
-            frappe.throw(_("Discount is not allowed for this POS Profile"))
-        
-        allowed_roles = {"Administrator", "System Manager", "URY Admin", "URY Manager", "URY Cashier"}
-        user_roles = set(frappe.get_roles(frappe.session.user))
-        if not allowed_roles.intersection(user_roles):
-            frappe.throw(_("Not permitted to apply discounts"), frappe.PermissionError)
 
-        invoice.additional_discount_percentage = discount_val
-    else:
-        invoice.additional_discount_percentage = 0
-        
+    # The discount belongs on the order before the bill is printed
+    # (apply_order_discount). Without a value here the order's existing
+    # discount is kept; older clients may still send one, but only while the
+    # bill has not been printed, so the paid amount matches the printed bill.
+    if additionalDiscount:
+        if cint(invoice.invoice_printed) == 1:
+            frappe.throw(_("The bill is already printed. Apply the discount on the order before printing."))
+        _set_invoice_discount(invoice, additionalDiscount, discount_type, pos_profile)
+
     invoice.calculate_taxes_and_totals()
+    _check_discount_limit(invoice, pos_profile)
 
     invoice.set("payments", [])
 

@@ -75,6 +75,9 @@
         "title": "الدفع",
         "apply_discount": "تطبيق الخصم",
         "discount_placeholder": "أدخل نسبة %",
+        "discount_type_percent": "%",
+        "discount_type_amount": "مبلغ",
+        "discount_amount_placeholder": "أدخل المبلغ",
         "payment_methods": "طرق الدفع",
         "amount_placeholder": "المبلغ",
         "total_entered": "الإجمالي المدخل",
@@ -144,6 +147,8 @@
         "print_failed": "فشلت الطباعة: {{reason}}",
         "invalid_discount": "يرجى إدخال قيمة خصم صحيحة",
         "discount_exceeds_max": "لا يمكن أن تتجاوز نسبة الخصم 100٪",
+        "discount_exceeds_total": "لا يمكن أن يتجاوز الخصم إجمالي الفاتورة",
+        "discount_exceeds_limit": "لا يمكن أن يتجاوز الخصم {{max}}٪ لملف نقطة البيع هذا",
         "please_print_first": "يرجى طباعة الفاتورة قبل إتمام عملية الدفع",
         "enter_cancel_reason": "يرجى إدخال سبب للإلغاء.",
         "dine_in_restricted": "الطلبات المحلية غير متاحة للدور الخاص بك",
@@ -242,5 +247,17 @@
         "paid": "مدفوع",
         "consolidated": "مجمع",
         "return": "مرتجع"
+    },
+    "discount": {
+        "title": "خصم الطلب",
+        "applied": "تم تطبيق الخصم",
+        "removed": "تمت إزالة الخصم",
+        "failed": "تعذر تحديث الخصم",
+        "remove": "إزالة",
+        "bill_total": "إجمالي الفاتورة",
+        "new_total": "الإجمالي الجديد",
+        "max_note": "الحد الأقصى المسموح: {{max}}٪",
+        "printed_note": "تمت طباعة الفاتورة بالفعل. يمكن للمدير فقط تغيير الخصم، ويجب طباعة الفاتورة مرة أخرى قبل الدفع.",
+        "button": "خصم"
     }
 }

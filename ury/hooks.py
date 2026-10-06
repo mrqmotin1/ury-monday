@@ -406,6 +406,7 @@ fixtures = [
                     "Branch-custom_no_taxes",
                     "Price List-restaurant_menu",
                     "POS Profile-custom_enable_discount",
+                    "POS Profile-custom_max_discount_percentage",
                     "POS Invoice-custom_comments",
                     "POS Profile-custom_multiple_cashier_configuration",
                     "POS Profile-custom_enable_multiple_cashier",

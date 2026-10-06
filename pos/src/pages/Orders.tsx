@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { Clock, User, UserCheck, Receipt, Printer, Pencil, X, GitBranch, GitMerge } from 'lucide-react';
+import { Clock, User, UserCheck, Receipt, Printer, Pencil, X, GitBranch, GitMerge, Percent } from 'lucide-react';
 import { Badge, Button, Card, CardContent } from '@ury/ui';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@ury/ui';
 import { showToast } from '@ury/ui';
@@ -11,6 +11,7 @@ import { Textarea } from '@ury/ui';
 import { usePOSStore } from '../store/pos-store';
 import { useNavigate } from 'react-router-dom';
 import PaymentDialog from '../components/PaymentDialog';
+import DiscountDialog from '../components/DiscountDialog';
 import BillSplitDialog from '../components/BillSplitDialog';
 import BillMergeDialog from '../components/BillMergeDialog';
 import OrderActionsMenu from '../components/OrderActionsMenu';
@@ -78,6 +79,7 @@ export default function Orders() {
   const [cancelLoading, setCancelLoading] = React.useState(false);
   const [editLoading, setEditLoading] = React.useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = React.useState(false);
+  const [showDiscountDialog, setShowDiscountDialog] = React.useState(false);
   const [showSplitDialog, setShowSplitDialog] = React.useState(false);
   const [showMergeDialog, setShowMergeDialog] = React.useState(false);
   const [orderActionsMenuOpen, setOrderActionsMenuOpen] = React.useState(false);
@@ -719,6 +721,20 @@ export default function Orders() {
               )}
             </div>
 
+            {/* Bill discount (set before printing) */}
+            {Number(selectedOrder.discount_amount) > 0 && (
+              <div className="px-6 pb-4">
+                <div className="flex justify-between items-center rounded-md bg-green-50 px-3 py-2 text-sm text-green-800">
+                  <span className="flex items-center gap-1.5">
+                    <Percent className="w-4 h-4" />
+                    {t('payment.discount')}
+                    {Number(selectedOrder.additional_discount_percentage) > 0 && ` (${Number(selectedOrder.additional_discount_percentage)}%)`}
+                  </span>
+                  <span className="font-semibold">-{formatCurrency(Number(selectedOrder.discount_amount))}</span>
+                </div>
+              </div>
+            )}
+
             {/* Sticky Bottom Section - Single Row: Print | Payment | Total */}
             <div className="border-t border-gray-200 p-6 bg-gray-50 sticky bottom-0 start-0 end-0 z-10">
               <div className="flex items-center gap-3 w-full">
@@ -733,6 +749,19 @@ export default function Orders() {
                 >
                   {isPrinting ? <Spinner className="w-5 h-5" hideMessage  message={t('common.loading')} /> : <Printer className="w-5 h-5" />}
                 </Button>
+                {/* Discount - set on the order before printing so the bill shows it */}
+                {posStore.posProfile?.enable_discount === 1 &&
+                  (selectedOrder.status === 'Draft' || selectedOrder.status === 'Unbilled') && (
+                  <Button
+                    variant="outline"
+                    className="flex-shrink-0"
+                    onClick={() => setShowDiscountDialog(true)}
+                    aria-label={t('discount.button')}
+                  >
+                    <Percent className="w-4 h-4 me-1" />
+                    {t('discount.button')}
+                  </Button>
+                )}
                 {/* Payment Button - Only show for Draft, Unbilled, and Recently Paid orders */}
                 {isOrderEditable(selectedOrder.status) && (
                   <Button
@@ -780,6 +809,22 @@ export default function Orders() {
           clearSelectedOrder={clearSelectedOrder}
           discountPercentage={selectedOrder.additional_discount_percentage}
           discountAmount={selectedOrder.discount_amount}
+        />
+      )}
+      {selectedOrder && (
+        <DiscountDialog
+          open={showDiscountDialog}
+          onOpenChange={setShowDiscountDialog}
+          invoice={selectedOrder.name}
+          baseTotal={Number(selectedOrder.grand_total || 0) + Number(selectedOrder.discount_amount || 0)}
+          discountPercentage={Number(selectedOrder.additional_discount_percentage) || 0}
+          discountAmount={Number(selectedOrder.discount_amount) || 0}
+          maxDiscount={posStore.posProfile?.max_discount || 0}
+          printed={String(selectedOrder.invoice_printed) === '1'}
+          onApplied={(result) => {
+            selectOrder({ ...selectedOrder, ...result });
+            fetchOrders();
+          }}
         />
       )}
       {selectedOrder && (

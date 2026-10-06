@@ -239,6 +239,29 @@ export async function selectNetworkPrinter(orderId: string, posProfile: string, 
 }
 
 
+export interface OrderDiscountResult {
+  name: string;
+  additional_discount_percentage: number;
+  discount_amount: number;
+  grand_total: number;
+  rounded_total: number;
+  invoice_printed: number;
+}
+
+/** Set (value > 0) or remove (0) the bill discount on an unpaid order, before printing. */
+export async function applyOrderDiscount(
+  invoice: string,
+  value: number,
+  discountType: 'Percentage' | 'Amount'
+): Promise<OrderDiscountResult> {
+  const response = await call.post('ury.ury.doctype.ury_order.ury_order.apply_order_discount', {
+    invoice,
+    discount_value: value,
+    discount_type: discountType,
+  });
+  return response.message;
+}
+
 export async function updatePrintStatus(orderId: string) {
   await call.post('ury.ury.api.ury_print.qz_print_update', { invoice: orderId });
 }

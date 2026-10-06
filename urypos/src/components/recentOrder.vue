@@ -296,25 +296,48 @@
 
           <template v-else>
             <span v-if="recentOrders.totalAmount > 0">
-              Additional {{ recentOrders.percentage }}% discount Applied
+              Additional {{ recentOrders.discountLabel }} discount Applied
             </span>
             <span v-else class="text-red-500">
-              {{ recentOrders.percentage }}% cannot be Applied
+              {{ recentOrders.discountLabel }} cannot be Applied
             </span>
           </template>
         </div>
       </div>
-      <div class="relative mb-6 mt-6" v-if="this.recentOrders.showInput">
+      <div class="relative mb-6 mt-6 flex gap-2" v-if="this.recentOrders.showInput">
+        <div class="inline-flex shrink-0 overflow-hidden rounded-lg border border-gray-300">
+          <button
+            v-for="type in ['Percentage', 'Amount']"
+            :key="type"
+            type="button"
+            class="px-3 text-sm font-semibold"
+            :class="this.recentOrders.discountType === type ? 'bg-blue-600 text-white' : 'bg-gray-50 text-gray-700'"
+            @click="this.recentOrders.setDiscountType(type)"
+          >
+            {{ type === "Percentage" ? "%" : "Amount" }}
+          </button>
+        </div>
         <input
           type="number"
           class="block w-full rounded-lg border border-gray-300 bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500"
-          placeholder="Enter Discount Percentage"
+          :placeholder="this.recentOrders.discountType === 'Amount' ? 'Enter Discount Amount' : 'Enter Discount Percentage'"
           v-model="this.recentOrders.percentage"
-          @input="this.recentOrders.updatePercentage"
           @keyup.enter="this.recentOrders.applyDiscount"
-          @keyup="this.recentOrders.resetTimer"
         />
+        <button
+          type="button"
+          class="shrink-0 rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white"
+          @click="this.recentOrders.applyDiscount"
+        >
+          Apply
+        </button>
       </div>
+      <p
+        v-if="this.recentOrders.showInput && this.recentOrders.invoicePrinted === 1"
+        class="-mt-4 mb-4 text-xs text-amber-700"
+      >
+        Bill already printed: only a manager can change the discount, and the bill must be printed again.
+      </p>
       <div class="mb-2 mt-5">
         <p class="truncate text-lg font-semibold text-gray-900 dark:text-white">
           Totals

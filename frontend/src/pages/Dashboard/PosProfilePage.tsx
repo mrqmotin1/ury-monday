@@ -21,6 +21,7 @@ interface PosProfileRecord {
   custom_qz_kot_print_format?: string;
   custom_qz_waiter_slip_format?: string;
   custom_enable_discount?: number;
+  custom_max_discount_percentage?: number;
   custom_multiple_cashier_configuration?: number;
   custom_enable_kot_reprint?: number;
   custom_daily_pos_close?: number;
@@ -266,6 +267,7 @@ export const PosProfilePage: React.FC = () => {
         custom_qz_kot_print_format: profile.custom_qz_kot_print_format || '',
         custom_qz_waiter_slip_format: profile.custom_qz_waiter_slip_format || '',
         custom_enable_discount: profile.custom_enable_discount || 0,
+        custom_max_discount_percentage: profile.custom_max_discount_percentage || '',
         custom_enable_kot_reprint: profile.custom_enable_kot_reprint || 0,
         custom_multiple_cashier_configuration: profile.custom_multiple_cashier_configuration || 0,
         custom_daily_pos_close: profile.custom_daily_pos_close || 0,
@@ -321,6 +323,7 @@ export const PosProfilePage: React.FC = () => {
         custom_qz_kot_print_format: form.custom_qz_kot_print_format || '',
         custom_qz_waiter_slip_format: form.custom_qz_waiter_slip_format || '',
         custom_enable_discount: form.custom_enable_discount ? 1 : 0,
+        custom_max_discount_percentage: form.custom_max_discount_percentage || '',
         custom_enable_kot_reprint: form.custom_enable_kot_reprint ? 1 : 0,
         custom_multiple_cashier_configuration: form.custom_multiple_cashier_configuration ? 1 : 0,
         custom_daily_pos_close: form.custom_daily_pos_close ? 1 : 0,
@@ -361,6 +364,7 @@ export const PosProfilePage: React.FC = () => {
           custom_qz_kot_print_format: profileForm.custom_qz_kot_print_format || '',
           custom_qz_waiter_slip_format: profileForm.custom_qz_waiter_slip_format || '',
           custom_enable_discount: profileForm.custom_enable_discount,
+          custom_max_discount_percentage: profileForm.custom_max_discount_percentage || 0,
           custom_enable_kot_reprint: profileForm.custom_enable_kot_reprint,
           custom_multiple_cashier_configuration: profileForm.custom_multiple_cashier_configuration,
           custom_daily_pos_close: profileForm.custom_daily_pos_close,
@@ -583,6 +587,19 @@ export const PosProfilePage: React.FC = () => {
                         onChange={(e) => setProfileForm(p => ({ ...p, paid_limit: e.target.value }))}
                         placeholder="e.g. 10"
                       />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-gray-700 mb-1.5">Max Discount (%)</label>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        disabled={!isEditMode || !profileForm.custom_enable_discount}
+                        value={profileForm.custom_max_discount_percentage || ''}
+                        onChange={(e) => setProfileForm(p => ({ ...p, custom_max_discount_percentage: e.target.value }))}
+                        placeholder="No limit (100%)"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1">Needs "Enable Item Discounts". Amount discounts count as % of the bill.</p>
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1.5">Table Attention Time (minutes)</label>
