@@ -10,7 +10,7 @@ import {
   RefreshCw,
   Lock,
 } from 'lucide-react';
-import { Button, Input } from '@ury/ui';
+import { Button, Input, BrandLogo } from '@ury/ui';
 import { useRootStore } from '../store/root-store';
 import { usePOSStore } from '../store/pos-store';
 import type { RootState } from '../store/root-store';
@@ -115,11 +115,7 @@ const Header = () => {
         {/* Logo */}
         <div className="flex items-center">
         <Link to="/dashboard" className="flex items-center gap-3">
-            <img
-              src="/assets/ury/pos/ury_pos.png"
-              alt="URY POS" 
-              className="h-10 w-auto"
-            />
+            <BrandLogo size="md" />
           </Link>
         </div>
 

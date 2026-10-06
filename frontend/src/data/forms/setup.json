@@ -13,7 +13,7 @@
       "id": "company_abbr",
       "label": "Company Abbreviation",
       "type": "text",
-      "placeholder": "e.g. URY",
+      "placeholder": "e.g. Monday Restaurant",
       "required": true,
       "validations": ["required", "maxLength:5"],
       "description": "Used as a short prefix for your invoice numbers. Auto-filled from your company name — edit if you'd like something different."

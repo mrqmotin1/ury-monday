@@ -7,11 +7,7 @@
       <!-- Card Container -->
       <div class="rounded-lg bg-white px-6 py-8 shadow-md">
         <div class="mb-8 flex justify-center">
-          <img
-            :src="imagePath"
-            alt="URY POS logo"
-            class="h-8 w-auto sm:h-8 lg:h-8"
-          />
+          <span class="whitespace-nowrap text-3xl leading-none tracking-tight" aria-label="Monday POS"><span class="font-extrabold text-blue-600">Monday</span> <span class="font-normal text-gray-500">POS</span></span>
         </div>
 
         <form class="space-y-6" @submit.prevent="this.auth.login">
@@ -102,7 +98,6 @@
 
 <script>
 import { useAuthStore } from "@/stores/Auth.js";
-import uriPosImage from "@/assets/logos/URY_POS.jpg";
 
 export default {
   setup() {
@@ -111,7 +106,6 @@ export default {
   },
   data() {
     return {
-      imagePath: uriPosImage,
     };
   },
 };

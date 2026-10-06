@@ -16,7 +16,7 @@
             "
           >
             <a href="/urypos/Table" class="flex-shrink-0">
-              <img :src="imagePath" alt="URY POS logo" class="w-32 lg:w-44" />
+              <span class="whitespace-nowrap text-xl leading-none tracking-tight lg:text-2xl" aria-label="Monday POS"><span class="font-extrabold text-blue-600">Monday</span> <span class="font-normal text-gray-500">POS</span></span>
             </a>
           </template>
           <template v-else>
@@ -101,7 +101,6 @@
 import { useAuthStore } from "@/stores/Auth.js";
 import { posOpening } from "@/stores/posOpening.js";
 import { posClosing } from "@/stores/posClosing.js";
-import uriPosImage from "@/assets/logos/URY_POS.jpg";
 import { tabFunctions } from "@/stores/bottomTabs.js";
 import { useTableStore } from "@/stores/Table.js";
 
@@ -118,7 +117,6 @@ export default {
   },
   data() {
     return {
-      imagePath: uriPosImage,
     };
   },
   methods: {

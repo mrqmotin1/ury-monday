@@ -1,7 +1,6 @@
 import { ReactNode } from 'react';
-import { Button } from '@ury/ui';
+import { Button, BrandLogo, BRAND_NAME } from '@ury/ui';
 import { Check } from 'lucide-react';
-import uryLogo from '../../../Public/photo_2026-08-19_13-24-09.jpg';
 
 interface WizardLayoutProps {
   step: 1 | 2;
@@ -35,7 +34,7 @@ export function WizardLayout({
       <header className="w-full border-b border-border bg-card">
         <div className={`${SHELL_WIDTH} h-16 flex items-center justify-between gap-4`}>
           <div className="flex items-center gap-3">
-            <img src={uryLogo} alt="URY Logo" className="h-7 w-auto" />
+            <BrandLogo size="md" />
             <span className="text-sm font-semibold text-foreground leading-none">Let's get your restaurant ready</span>
           </div>
 
@@ -73,7 +72,7 @@ export function WizardLayout({
         </div>
       </footer>
 
-      <div className="py-3 text-center text-xs text-muted-foreground">URY · {version}</div>
+      <div className="py-3 text-center text-xs text-muted-foreground">{BRAND_NAME} · {version}</div>
     </div>
   );
 }

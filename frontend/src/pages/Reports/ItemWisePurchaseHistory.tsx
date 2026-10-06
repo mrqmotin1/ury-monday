@@ -96,7 +96,7 @@ export function ItemWisePurchaseHistory() {
         columns={columns}
         rows={data?.items ?? []}
         isLoading={isLoading}
-        emptyMessage="No purchase records in this range — Purchase Invoices are created via standard ERPNext Desk, not a URY-specific workflow, so this may legitimately be sparse."
+        emptyMessage="No purchase records in this range — Purchase Invoices are created via standard ERPNext Desk, not a POS-specific workflow, so this may legitimately be sparse."
       />
     </div>
   );
