@@ -104,9 +104,9 @@ export default function SetupPage() {
         const defaultLanguage = (defaults.languages as any)?.default_language || 'English';
         formRef.current?.setFieldValue('language', defaultLanguage);
 
-        const countryToUse = defaults.detected_country || 'India';
+        const countryToUse = defaults.detected_country || '';
         formRef.current?.setFieldValue('country', countryToUse);
-        await handleCountryChange(countryToUse);
+        if (countryToUse) await handleCountryChange(countryToUse);
       } catch (err) {
         console.error("Failed to load setup defaults", err);
       }

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
 import { Card, CardContent, CardHeader, CardTitle, StatCard } from '@ury/ui';
-import { IndianRupee, TrendingUp, TrendingDown, Percent, AlertTriangle, ChevronDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, Percent, AlertTriangle, ChevronDown } from 'lucide-react';
+import { CurrencyIcon } from '../../components/reports/CurrencyIcon';
 import { useBranchContext } from '../../context/BranchContext';
 import { toApiDate } from '../../lib/reportDate';
 import { DatePicker } from '../../components/setup/DatePicker';
@@ -259,7 +260,7 @@ export function DailyPnl() {
             <StatCard
               label="Gross Sales"
               value={formatCurrency(summaryMap.get('gross_sales')?.amount ?? 0)}
-              icon={<IndianRupee className="w-4 h-4" />}
+              icon={<CurrencyIcon className="w-4 h-4" />}
             />
             <StatCard
               label="Net Sales"

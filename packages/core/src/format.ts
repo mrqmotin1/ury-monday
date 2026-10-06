@@ -1,10 +1,71 @@
 import { storage } from './storage';
 
+type FrappeBoot = {
+  sysdefaults?: { currency?: string; number_format?: string };
+  docs?: Array<{ doctype?: string; name?: string; symbol?: string }>;
+};
+
+function getBoot(): FrappeBoot {
+  return (typeof window !== 'undefined' && (window as any).frappe?.boot) || {};
+}
+
+// Frappe number formats (System Settings) -> a locale whose grouping matches.
+const NUMBER_FORMAT_LOCALES: Record<string, string> = {
+  '#,##,###.##': 'en-IN',
+  '#,###.##': 'en-US',
+  '#,###.###': 'en-US',
+  '#,###': 'en-US',
+  '#.###,##': 'de-DE',
+  '#.###': 'de-DE',
+  '# ###.##': 'fr-FR',
+  '# ###,##': 'fr-FR',
+  "#'###.##": 'de-CH',
+  '#, ###.##': 'en-US',
+  '#,###.##########': 'en-US',
+};
+
+/** Site currency code: POS profile currency if loaded, else the site default. */
+export function getCurrencyCode(): string {
+  return storage.getItem('currency') || getBoot().sysdefaults?.currency || '';
+}
+
+/** Symbol for the active currency, resolved without any hardcoded fallback. */
+export function getCurrencySymbol(): string {
+  const cached = storage.getItem('currencySymbol');
+  if (cached) return cached;
+
+  const code = getCurrencyCode();
+  if (!code) return '';
+
+  const bootDoc = getBoot().docs?.find((d) => d.doctype === 'Currency' && d.name === code);
+  if (bootDoc?.symbol) return bootDoc.symbol;
+
+  try {
+    const part = new Intl.NumberFormat(undefined, { style: 'currency', currency: code })
+      .formatToParts(0)
+      .find((p) => p.type === 'currency');
+    if (part?.value) return part.value;
+  } catch {
+    // Unknown ISO code for Intl -- fall through to the code itself.
+  }
+  return code;
+}
+
+/** Locale matching the site's number format; undefined = browser locale. */
+export function getNumberLocale(): string | undefined {
+  const numberFormat = getBoot().sysdefaults?.number_format;
+  return (numberFormat && NUMBER_FORMAT_LOCALES[numberFormat]) || undefined;
+}
+
+function withSymbol(value: string | number): string {
+  const symbol = getCurrencySymbol();
+  return symbol ? `${symbol} ${value}` : `${value}`;
+}
+
 export function formatCurrency(amount: number): string {
-  const symbol = storage.getItem('currencySymbol') || '₹';
   const roundedAmount = flt(amount, 2);
-  const formattedVal = typeof roundedAmount === 'number' && !isNaN(roundedAmount) ? roundedAmount.toLocaleString('en-IN') : roundedAmount;
-  return `${symbol} ${formattedVal}`;
+  const formattedVal = typeof roundedAmount === 'number' && !isNaN(roundedAmount) ? roundedAmount.toLocaleString(getNumberLocale()) : roundedAmount;
+  return withSymbol(formattedVal);
 }
 
 export function flt(v: number | string | null | undefined, decimals: number = 2): number {
@@ -23,25 +84,19 @@ export function flt(v: number | string | null | undefined, decimals: number = 2)
 }
 
 /**
- * Formats a number as compact Indian-style currency for chart axes/labels,
- * e.g. 600000 -> "₹6L", 12500000 -> "₹1.25Cr", 8200 -> "₹8.2k".
+ * Formats a number as compact currency for chart axes/labels, following the
+ * site's number format: e.g. 600000 -> "6L" (en-IN) or "600K" (en-US).
  */
 export function formatCompactCurrency(amount: number): string {
-  const symbol = storage.getItem('currencySymbol') || '₹';
-  if (typeof amount !== 'number' || isNaN(amount)) return `${symbol} ${amount}`;
+  const symbol = getCurrencySymbol();
+  if (typeof amount !== 'number' || isNaN(amount)) return withSymbol(amount);
 
   const sign = amount < 0 ? '-' : '';
-  const abs = Math.abs(amount);
-
-  const trim = (value: number) => {
-    const rounded = Math.round(value * 100) / 100;
-    return rounded % 1 === 0 ? rounded.toString() : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-  };
-
-  if (abs >= 1_00_00_000) return `${sign}${symbol}${trim(abs / 1_00_00_000)}Cr`;
-  if (abs >= 1_00_000) return `${sign}${symbol}${trim(abs / 1_00_000)}L`;
-  if (abs >= 1_000) return `${sign}${symbol}${trim(abs / 1_000)}k`;
-  return `${sign}${symbol}${trim(abs)}`;
+  const compact = new Intl.NumberFormat(getNumberLocale(), {
+    notation: 'compact',
+    maximumFractionDigits: 2,
+  }).format(Math.abs(amount));
+  return `${sign}${symbol}${compact}`;
 }
 
 export const formatInvoiceTime = (timestamp: string | null) => {

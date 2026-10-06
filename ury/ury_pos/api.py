@@ -923,8 +923,17 @@ def getAggregatorMOP(aggregator):
             {"mode_of_payment": modeOfPayment, "opening_amount": float(0)}
     )
     return modeOfPaymentsList
+def _get_default_customer_group():
+    """Selling Settings default if it's a leaf group, else 'Individual', else any leaf group."""
+    default_group = frappe.db.get_single_value("Selling Settings", "customer_group")
+    if default_group and not frappe.db.get_value("Customer Group", default_group, "is_group"):
+        return default_group
+    if frappe.db.exists("Customer Group", {"name": "Individual", "is_group": 0}):
+        return "Individual"
+    return frappe.db.get_value("Customer Group", {"is_group": 0}, "name")
+
 @frappe.whitelist()
-def create_customer(customer_name, mobile_number=None, customer_group="Individual", territory="India"):
+def create_customer(customer_name, mobile_number=None, customer_group=None, territory=None):
     if not frappe.has_permission("Customer", "create"):
         frappe.throw("Not permitted to create customers", frappe.PermissionError)
         
@@ -939,23 +948,32 @@ def create_customer(customer_name, mobile_number=None, customer_group="Individua
 
     """Create a new customer"""
     try:
-        customer = frappe.get_doc({
+        customer_data = {
             "doctype": "Customer",
             "customer_name": customer_name,
             "mobile_number": mobile_number,
-            "customer_group": customer_group,
-            "territory": territory
-        })
+        }
+        # Territory is optional: only set when the caller picks one. Customer
+        # group falls back to a leaf group, since a blank group gets filled from
+        # Selling Settings, which may hold a group node that ERPNext rejects.
+        customer_group = customer_group or _get_default_customer_group()
+        if customer_group:
+            customer_data["customer_group"] = customer_group
+        if territory:
+            customer_data["territory"] = territory
+
+        customer = frappe.get_doc(customer_data)
         customer.insert()
         frappe.db.commit()
 
         return {
             "status": "success",
             "message": "Customer created successfully",
-            "customer_name": customer_name,
-            "mobile_number": mobile_number,
-            "customer_group": customer_group,
-            "territory": territory
+            "name": customer.name,
+            "customer_name": customer.customer_name,
+            "mobile_number": customer.mobile_number,
+            "customer_group": customer.customer_group,
+            "territory": customer.territory
         }
 
     except Exception as e:

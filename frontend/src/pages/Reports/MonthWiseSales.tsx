@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
 import { StatCard, DataTable, type DataTableColumn } from '@ury/ui';
-import { IndianRupee, TrendingUp, Trophy, TrendingDown } from 'lucide-react';
+import { TrendingUp, Trophy, TrendingDown } from 'lucide-react';
+import { CurrencyIcon } from '../../components/reports/CurrencyIcon';
 import { useBranchContext } from '../../context/BranchContext';
 import { BarChartCard } from '../../components/reports/charts/BarChartCard';
 import { SearchableSelect } from '../../components/common/SearchableSelect';
@@ -110,7 +111,7 @@ export function MonthWiseSales() {
             <StatCard
               label="Total Revenue"
               value={formatCurrency(data.summary.total_revenue)}
-              icon={<IndianRupee className="w-4 h-4" />}
+              icon={<CurrencyIcon className="w-4 h-4" />}
             />
             <StatCard
               label="Avg Monthly"

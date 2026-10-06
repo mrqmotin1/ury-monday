@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useBranchContext } from '../../context/BranchContext';
 import { Plus, Store, Edit2 } from 'lucide-react';
 import { Card, Button, Input, Spinner, showToast, Dialog, DialogContent, DialogHeader, DialogTitle } from '@ury/ui';
-import { call } from '@ury/core';
+import { call, getCurrencyCode } from '@ury/core';
 import { SearchableSelect } from '../../components/common/SearchableSelect';
 
 interface AggregatorSetting {
@@ -105,8 +105,7 @@ export const AggregatorPage: React.FC = () => {
         doc: {
           doctype: 'Customer',
           customer_name: newAggregatorName,
-          customer_group: 'Commercial',
-          territory: 'All Territories'
+          customer_group: 'Commercial'
         }
       }).catch((e: any) => {
         const errorMessage = e?.message || e?.responseJSON?.message || String(e);
@@ -124,7 +123,7 @@ export const AggregatorPage: React.FC = () => {
           doctype: 'Price List',
           price_list_name: newAggregatorName,
           selling: 1,
-          currency: 'INR'
+          currency: getCurrencyCode()
         }
       }).catch((e: any) => {
         const errorMessage = e?.message || e?.responseJSON?.message || String(e);
@@ -243,8 +242,7 @@ export const AggregatorPage: React.FC = () => {
         doc: {
           doctype: 'Customer',
           customer_name: editForm.aggregator,
-          customer_group: 'Commercial',
-          territory: 'All Territories'
+          customer_group: 'Commercial'
         }
       }).catch((e: any) => {
         const errorMessage = e?.message || e?.responseJSON?.message || String(e);

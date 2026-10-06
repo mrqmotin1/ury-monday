@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
 import { StatCard, DataTable, type DataTableColumn } from '@ury/ui';
-import { IndianRupee, Receipt, TrendingUp } from 'lucide-react';
+import { Receipt, TrendingUp } from 'lucide-react';
+import { CurrencyIcon } from '../../components/reports/CurrencyIcon';
 import { useBranchContext } from '../../context/BranchContext';
 import { DateRangeFilter, type DateRangeValue } from '../../components/reports/DateRangeFilter';
 import { PieChartCard } from '../../components/reports/charts/PieChartCard';
@@ -87,7 +88,7 @@ export function ServiceWiseSales() {
             <StatCard
               label="Total Revenue"
               value={formatCurrency(data.summary.total_revenue)}
-              icon={<IndianRupee className="w-4 h-4" />}
+              icon={<CurrencyIcon className="w-4 h-4" />}
             />
             <StatCard label="Total Orders" value={data.summary.total_orders} icon={<Receipt className="w-4 h-4" />} />
             <StatCard

@@ -1,6 +1,7 @@
 # Copyright (c) 2023, Tridz Technologies Pvt. Ltd. and contributors
 # For license information, please see license.txt
 
+import erpnext
 import frappe
 from frappe.model.document import Document
 import json
@@ -552,5 +553,5 @@ class URYDailyPandL(Document):
 	def get_proft_loss_details(self):
 		return frappe.render_template(
 			"ury/doctype/ury_daily_p_and_l/profit_loss_details.html",
-			{"data": self, "currency": "INR"},
+			{"data": self, "currency": erpnext.get_default_currency()},
 		)

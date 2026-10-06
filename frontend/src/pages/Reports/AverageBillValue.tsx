@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
 import { StatCard, DataTable, type DataTableColumn } from '@ury/ui';
-import { Gauge, IndianRupee, Receipt } from 'lucide-react';
+import { Gauge, Receipt } from 'lucide-react';
+import { CurrencyIcon } from '../../components/reports/CurrencyIcon';
 import { useBranchContext } from '../../context/BranchContext';
 import { DateRangeFilter, type DateRangeValue } from '../../components/reports/DateRangeFilter';
 import { LineChartCard } from '../../components/reports/charts/LineChartCard';
@@ -86,7 +87,7 @@ export function AverageBillValue() {
             <StatCard
               label="Total Sales"
               value={formatCurrency(data.summary.total_sales)}
-              icon={<IndianRupee className="w-4 h-4" />}
+              icon={<CurrencyIcon className="w-4 h-4" />}
             />
             <StatCard
               label="Average Bill Value"

@@ -22,7 +22,7 @@ def get_setup_defaults():
         detected_country = ""
         
     if not detected_country:
-        detected_country = frappe.db.get_single_value("System Settings", "country") or "India"
+        detected_country = frappe.db.get_single_value("System Settings", "country") or ""
     
     countries_dict = get_all()
     countries = list(countries_dict.keys())

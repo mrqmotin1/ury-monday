@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { storage } from '@ury/core';
+import { storage, getCurrencyCode } from '@ury/core';
 import { getRestaurantMenu, getAggregatorMenu, MenuItem as APIMenuItem } from '../lib/menu-api';
 import { getCurrencyInfo, PosProfileCombined, getCombinedPosProfile } from '../lib/pos-profile-api';
 import { getMenuCourses } from '../lib/menu-course-api';
@@ -172,6 +172,7 @@ interface POSStore extends POSState {
   fetchPosProfile: () => Promise<void>;
   fetchCustomerGroups: () => Promise<void>;
   fetchTerritories: () => Promise<void>;
+  syncCurrency: (profileCurrency?: string) => Promise<void>;
   fetchCurrencySymbol: () => Promise<void>;
   getCartTotals: () => CartTotals;
   itemExistsInCart: (uniqueId: string) => boolean;
@@ -312,7 +313,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   posProfile: null,
   customerGroups: [],
   territories: [],
-  currency: storage.getItem('currency') || 'INR',
+  currency: getCurrencyCode(),
   currencySymbol: storage.getItem('currencySymbol') || null,
   tableOrder: null,
   isInitializing: true,
@@ -362,11 +363,8 @@ export const usePOSStore = create<POSStore>((set, get) => ({
         set({ 
           posProfile: profile, 
           profileLoading: false,
-          currency: profile.currency || 'INR'
         });
-        if (!storage.getItem('currencySymbol')) {
-          await get().fetchCurrencySymbol();
-        }
+        await get().syncCurrency(profile.currency);
         return;
       }
 
@@ -377,18 +375,26 @@ export const usePOSStore = create<POSStore>((set, get) => ({
       set({ 
         posProfile: combinedProfile, 
         profileLoading: false,
-        currency: combinedProfile.currency || 'INR'
       });
-      
-      if (!storage.getItem('currencySymbol')) {
-        await get().fetchCurrencySymbol();
-      }
+      await get().syncCurrency(combinedProfile.currency);
     } catch (error) {
       console.error('Error fetching POS profile:', error);
       set({ 
         error: 'Failed to fetch POS profile',
         profileLoading: false 
       });
+    }
+  },
+
+  syncCurrency: async (profileCurrency?: string) => {
+    const currency = profileCurrency || getCurrencyCode();
+    // Refetch the symbol when the currency changed, not only when it's missing,
+    // so a stale symbol never outlives a currency switch.
+    const currencyChanged = storage.getItem('currency') !== currency;
+    storage.setItem('currency', currency);
+    set({ currency });
+    if (currencyChanged || !storage.getItem('currencySymbol')) {
+      await get().fetchCurrencySymbol();
     }
   },
 

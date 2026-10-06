@@ -111,6 +111,17 @@ def create_setup_user(email, name, password=None, role="URY Cashier"):
         update_password(user=email, pwd=password)
     return {"status": "created", "email": email}
 
+def _get_site_currency():
+    """Site default currency, else the currency of the System Settings country."""
+    currency = frappe.defaults.get_global_default("currency")
+    if currency:
+        return currency
+    country = frappe.db.get_single_value("System Settings", "country")
+    if country:
+        from frappe.geo.country_info import get_country_info
+        return (get_country_info(country) or {}).get("currency")
+    return None
+
 @frappe.whitelist()
 def submit_configure_data(data):
     if isinstance(data, str):
@@ -130,7 +141,7 @@ def submit_configure_data(data):
             comp_doc = frappe.get_doc({
                 "doctype": "Company",
                 "company_name": default_company,
-                "default_currency": "INR"
+                "default_currency": _get_site_currency()
             })
             comp_doc.insert(ignore_permissions=True)
             

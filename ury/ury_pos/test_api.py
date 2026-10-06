@@ -336,6 +336,17 @@ class TestUryPosApi(unittest.TestCase):
         
         self.assertEqual(result.get("status"), "success")
         self.assertTrue(frappe.db.exists("Customer", "Test Auth Customer"))
+        # No territory is forced when the caller doesn't pass one; only a
+        # site-level Selling Settings default may fill it in.
+        self.assertEqual(
+            result.get("territory") or None,
+            frappe.defaults.get_global_default("territory") or None,
+        )
+        # Customer group always resolves to a leaf group ERPNext accepts.
+        self.assertTrue(result.get("customer_group"))
+        self.assertFalse(
+            frappe.db.get_value("Customer Group", result.get("customer_group"), "is_group")
+        )
 
 
 

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
 import { StatCard } from '@ury/ui';
-import { Receipt, IndianRupee, Percent, Sigma, Equal, BadgePercent } from 'lucide-react';
+import { Receipt, Percent, Sigma, Equal, BadgePercent } from 'lucide-react';
+import { CurrencyIcon } from '../../components/reports/CurrencyIcon';
 import { useBranchContext } from '../../context/BranchContext';
 import { toApiDate } from '../../lib/reportDate';
 import { DatePicker } from '../../components/setup/DatePicker';
@@ -96,7 +97,7 @@ export function TodaysSales() {
           <StatCard
             label="Item Total"
             value={formatCurrency(data.item_total)}
-            icon={<IndianRupee className="w-4 h-4" />}
+            icon={<CurrencyIcon className="w-4 h-4" />}
           />
           <StatCard
             label="Total Taxes & Charges"

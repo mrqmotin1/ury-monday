@@ -2,6 +2,7 @@ import json
 import os
 from random import randint
 
+import erpnext
 import frappe
 from frappe import _, scrub
 from frappe.utils import add_days, getdate
@@ -81,7 +82,7 @@ def ensure_master_records_exist():
                     "enabled": 1,
                     "buying": 1 if "Buying" in pl else 0,
                     "selling": 1 if "Selling" in pl else 0,
-                    "currency": frappe.defaults.get_global_default("currency") or "INR"
+                    "currency": frappe.defaults.get_global_default("currency") or erpnext.get_default_currency()
                 }).insert(ignore_permissions=True)
             except frappe.DuplicateEntryError:
                 pass

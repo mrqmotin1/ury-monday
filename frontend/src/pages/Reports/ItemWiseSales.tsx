@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { call, formatCurrency } from '@ury/core';
 import { StatCard, DataTable, type DataTableColumn, Button } from '@ury/ui';
-import { Package, IndianRupee, Hash, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Package, Hash, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CurrencyIcon } from '../../components/reports/CurrencyIcon';
 import { useBranchContext } from '../../context/BranchContext';
 import { DateRangeFilter, type DateRangeValue } from '../../components/reports/DateRangeFilter';
 import { toApiDate } from '../../lib/reportDate';
@@ -111,7 +112,7 @@ export function ItemWiseSales() {
           <StatCard
             label="Total Amount"
             value={formatCurrency(data.summary.total_amount)}
-            icon={<IndianRupee className="w-4 h-4" />}
+            icon={<CurrencyIcon className="w-4 h-4" />}
           />
         </div>
       )}
