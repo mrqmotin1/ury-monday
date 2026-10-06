@@ -132,3 +132,46 @@ export function subscribeRealtimeEvent(
     activeSocket?.off(eventName, handler);
   };
 }
+
+/**
+ * Listen for Frappe's built-in `list_update` events for one doctype. Frappe
+ * publishes these after every insert/save/submit/cancel of a document, to the
+ * `doctype:<name>` room; the realtime server only lets users with read access
+ * join that room. Rooms are dropped on reconnect, so we re-join on every
+ * `connect`.
+ *
+ * Returns a cleanup function (pass to useEffect return).
+ */
+export function subscribeDoctypeUpdates(
+  doctype: string,
+  handler: (data: { doctype: string; name: string; user?: string }) => void,
+): () => void {
+  let cancelled = false;
+  let activeSocket: Socket | null = null;
+
+  const join = () => activeSocket?.emit('doctype_subscribe', doctype);
+  const onListUpdate = (data: any) => {
+    if (data?.doctype === doctype) handler(data);
+  };
+
+  getSetupSocket()
+    .then((s) => {
+      if (cancelled) return;
+      activeSocket = s;
+      s.on('connect', join);
+      s.on('list_update', onListUpdate);
+      join();
+    })
+    .catch((err) => {
+      console.error(`[URY realtime] Failed to subscribe to ${doctype} updates:`, err);
+    });
+
+  return () => {
+    cancelled = true;
+    if (activeSocket) {
+      activeSocket.emit('doctype_unsubscribe', doctype);
+      activeSocket.off('connect', join);
+      activeSocket.off('list_update', onListUpdate);
+    }
+  };
+}

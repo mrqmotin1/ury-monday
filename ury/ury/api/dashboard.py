@@ -1,20 +1,53 @@
 import frappe
 from frappe.utils import today
 
+def _branch_filter(branch):
+    """'all' / empty means every branch; otherwise filter on the Branch name."""
+    return branch if branch and branch != 'all' else None
+
+
 @frappe.whitelist()
 def get_dashboard_summary(branch=None):
-    filters = {}
-    if branch and branch != 'all':
-        pass
+    from ury.ury.report_api.sales import get_today_sales
+    from ury.ury.report_api.utils import require_manager
 
+    branch = _branch_filter(branch)
+    branch_filters = {"branch": branch} if branch else {}
+
+    today_sales = 0
+    today_orders = 0
+    avg_order_value = 0
+    try:
+        require_manager()
+        # Same numbers as the Today's Sales report (incl. branch business-day hours).
+        sales = get_today_sales(branch=branch)
+        today_sales = sales.get("grand_total") or 0
+        today_orders = sales.get("total_invoices") or 0
+        avg_order_value = round(today_sales / today_orders, 2) if today_orders else 0
+    except frappe.PermissionError:
+        frappe.clear_last_message()
+
+    pending_kitchen_orders = 0
+    if frappe.db.exists("DocType", "URY KOT"):
+        # Mirrors the KOT display's pending queue (ury_kot_display.py).
+        pending_kitchen_orders = frappe.db.count("URY KOT", {
+            **branch_filters,
+            "order_status": "Ready For Prepare",
+            "type": ["in", ["New Order", "Order Modified", "Duplicate", "Cancelled", "Partially cancelled"]],
+            "docstatus": 1,
+            "verified": 0,
+            "creation": [">=", frappe.utils.add_to_date(frappe.utils.now_datetime(), hours=-3)],
+        })
+
+    has_tables = frappe.db.exists("DocType", "URY Table")
     return {
-        "today_sales": 0,
-        "today_orders": 0,
-        "occupied_tables": 0,
-        "total_tables": frappe.db.count("URY Table") if frappe.db.exists("DocType", "URY Table") else 0,
-        "avg_order_value": 0,
+        "today_sales": today_sales,
+        "today_orders": today_orders,
+        "occupied_tables": frappe.db.count("URY Table", {**branch_filters, "occupied": 1}) if has_tables else 0,
+        "total_tables": frappe.db.count("URY Table", branch_filters) if has_tables else 0,
+        "avg_order_value": avg_order_value,
         "active_cashiers": frappe.db.count("User", {"enabled": 1}),
-        "pending_kitchen_orders": 0,
+        "pending_kitchen_orders": pending_kitchen_orders,
         "total_menu_items": frappe.db.count("Item") if frappe.db.exists("DocType", "Item") else 0,
     }
 
@@ -33,8 +66,9 @@ def get_dashboard_charts(branch=None):
 @frappe.whitelist()
 def get_recent_transactions(branch=None, limit=10):
     filters = {"docstatus": ["in", [0, 1]]}
-    if branch and branch != 'all':
-        pass # Add branch filter if applicable for POS Invoice, usually 'custom_branch' or 'branch'
+    branch = _branch_filter(branch)
+    if branch:
+        filters["branch"] = branch
     
     if frappe.db.exists("DocType", "POS Invoice"):
         try:
