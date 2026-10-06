@@ -1673,46 +1673,52 @@ def get_menu_name(order_type):
 
 @frappe.whitelist()
 def pos_opening_check():
-    
-    user = frappe.session.user
-    # Handle the administrator case differently
-    if user == "Administrator":
-        return {
-            "opening_exists": False,  # Assuming no POS opening entry is needed for Administrator
-            "cashier": None,
-            "pos_profile": None,
-        }
-    
-    details = getBranchRoom()
-    room = details[0].get('name')    # 'Beach'
-    branch = details[0].get('branch') # 'Beach'
-    
-    pos_opening_list = frappe.db.sql("""
-        SELECT DISTINCT `tabPOS Opening Entry`.name 
-        FROM `tabPOS Opening Entry`
-        INNER JOIN `tabMultiple Rooms` 
-        ON `tabMultiple Rooms`.parent = `tabPOS Opening Entry`.name
-        WHERE `tabPOS Opening Entry`.branch = %s
-        AND `tabPOS Opening Entry`.status = 'Open'
-        AND `tabPOS Opening Entry`.docstatus = 1
-        AND `tabMultiple Rooms`.room = %s
-    """, (branch, room), as_dict=True)
-    
-    
+    """Is there an open POS shift for this user's branch? Used by the desk URY
+    Order form and the legacy POS login.
+
+    Multiple-cashier profiles keep the room rule (the shift must cover the
+    user's room). Otherwise any open shift of the branch counts, preferring the
+    user's own, the same way the React POS checks it.
+    """
+    branch = getBranch()
+    pos_profile = frappe.db.get_value("POS Profile", {"branch": branch, "disabled": 0}, "name")
+    multiple_cashier = pos_profile and frappe.db.get_value(
+        "POS Profile", pos_profile, "custom_enable_multiple_cashier"
+    )
+
+    if multiple_cashier:
+        details = getBranchRoom()
+        room = details[0].get('name')
+        pos_opening_list = frappe.db.sql("""
+            SELECT DISTINCT `tabPOS Opening Entry`.name
+            FROM `tabPOS Opening Entry`
+            INNER JOIN `tabMultiple Rooms`
+            ON `tabMultiple Rooms`.parent = `tabPOS Opening Entry`.name
+            WHERE `tabPOS Opening Entry`.branch = %s
+            AND `tabPOS Opening Entry`.status = 'Open'
+            AND `tabPOS Opening Entry`.docstatus = 1
+            AND `tabMultiple Rooms`.room = %s
+        """, (branch, room), as_dict=True)
+        opening_name = pos_opening_list[0].name if pos_opening_list else None
+    else:
+        open_filters = {"branch": branch, "status": "Open", "docstatus": 1}
+        opening_name = frappe.db.get_value(
+            "POS Opening Entry", {**open_filters, "user": frappe.session.user}, "name"
+        ) or frappe.db.get_value(
+            "POS Opening Entry", open_filters, "name", order_by="creation desc"
+        )
+
     result = {
-        "opening_exists": len(pos_opening_list) > 0,
+        "opening_exists": bool(opening_name),
         "cashier": None,
         "pos_profile": None,
     }
 
-    if result["opening_exists"]:
-        # If POS opening entry exists, fetch the cashier from the first entry
-        opening_entry = frappe.get_doc("POS Opening Entry", pos_opening_list[0].name)
-        result["cashier"] = (
-            opening_entry.user
-        )  # Fetch values from POS Profile linked to POS Opening Entry
+    if opening_name:
+        opening_entry = frappe.get_doc("POS Opening Entry", opening_name)
+        result["cashier"] = opening_entry.user
         result["pos_profile"] = opening_entry.pos_profile
-        
+
     return result
 
 
