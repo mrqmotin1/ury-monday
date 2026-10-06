@@ -73,7 +73,14 @@ def confirm_cancel_kot(name):
 
 @frappe.whitelist(allow_guest=True)
 def get_site_name():
-    return {"site_name": frappe.local.site}
+    # socketio_port/dev_server let SPA socket clients pick the right host the
+    # way Frappe desk does: under `bench start` socket.io listens on its own
+    # port (e.g. 9000); in production nginx serves it on the site's origin.
+    return {
+        "site_name": frappe.local.site,
+        "socketio_port": frappe.conf.socketio_port,
+        "dev_server": bool(frappe.local.dev_server),
+    }
 
 def build_dashboard_summary(kot_list):
     summary = {}

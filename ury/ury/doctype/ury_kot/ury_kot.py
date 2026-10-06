@@ -18,13 +18,29 @@ class URYKOT(Document):
 
     # Function for printing multiple KOTs.
     def multi_print_kot(self):
+        # QZ Print on the POS Profile: an open POS prints the KOT on the
+        # profile's POS Printer instead of the network printers below.
+        from ury.ury.api.qz_print_jobs import (
+            DEFAULT_QZ_KOT_PRINT_FORMAT,
+            is_qz_profile,
+            queue_qz_print,
+        )
+
+        if is_qz_profile(self.pos_profile):
+            kot_format = frappe.db.get_value(
+                "POS Profile", self.pos_profile, "custom_qz_kot_print_format"
+            ) or (DEFAULT_QZ_KOT_PRINT_FORMAT if frappe.db.exists("Print Format", DEFAULT_QZ_KOT_PRINT_FORMAT) else None)
+            if kot_format:
+                queue_qz_print(self.pos_profile, self, kot_format, "KOT", title=f"KOT {self.name}")
+            return
+
         # Function for printing a KOT on a specified printer using a print format.
         def print_kot(printer, kot_print_format):
             try:
                 # Print KOT using a server function (print_by_server)
                 print_by_server("URY KOT", self.name, printer, kot_print_format)
-            except:
-                pass
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"URY KOT print failed: {self.name} on {printer}")
 
         
         pos_kot_printers = frappe.db.get_all(

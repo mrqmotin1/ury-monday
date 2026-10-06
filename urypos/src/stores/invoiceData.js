@@ -15,6 +15,7 @@ import {
   loadQzPrinter,
   disconnectQzPrinter,
 } from "./utils/PrintWithQz";
+import { startQzPrintJobListener } from "./utils/qzPrintJobs";
 
 export const useInvoiceDataStore = defineStore("invoiceData", {
   state: () => ({
@@ -28,6 +29,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
     branch: null,
     printer: null,
     qz_host: null,
+    qz_printer: null,
     company: null,
     currency: null,
     qz_print: null,
@@ -81,6 +83,7 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
           this.print_format = this.invoiceDetails.print_format;
           this.qz_print = this.invoiceDetails.qz_print;
           this.qz_host = this.invoiceDetails.qz_host;
+          this.qz_printer = this.invoiceDetails.qz_printer;
           this.print_type = this.invoiceDetails.print_type;
           this.printer = this.invoiceDetails.printer;
           this.paidLimit = this.invoiceDetails.paid_limit;
@@ -89,8 +92,21 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
           this.enableKotReprint=this.invoiceDetails.enable_kot_reprint;
           this.multipleCashier=this.invoiceDetails.multiple_cashier
           this.editOrderType=this.invoiceDetails.edit_order_type
-          if (this.qz_host) {
-            loadQzPrinter(this.qz_host);
+          if (this.print_type === "qz") {
+            // Warm up the QZ connection; failures surface when printing.
+            loadQzPrinter(this.qz_host).catch((err) =>
+              console.warn("[QZ] Pre-connect failed:", err?.title || err)
+            );
+            // KOT / waiter slip / KOT reprint jobs created on the server.
+            startQzPrintJobListener(
+              {
+                branch: this.branch,
+                posProfile: this.posProfile,
+                qzHost: this.qz_host,
+                qzPrinter: this.qz_printer,
+              },
+              (message) => this.alert.createAlert("Print Error", message, "OK")
+            ).catch((err) => console.error("[QZ] Print job listener failed:", err));
           }
           this.db
             .getDoc("Company", this.company)
@@ -465,27 +481,30 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
         this.invoiceNumber;
       try {
         if (this.print_type === "qz") {
-          const printHTML = {
-            doc: "POS Invoice",
-            name: invoiceNo,
-            print_format: this.print_format,
-            _lang: "en",
-          };
+          // Raw ESC/POS when the print format has "Raw Printing" on, else HTML.
           const result = await this.call.get(
-            "frappe.www.printview.get_html_and_style",
-            printHTML
+            "ury.ury.api.ury_print.get_qz_print_data",
+            {
+              doctype: "POS Invoice",
+              name: invoiceNo,
+              print_format: this.print_format,
+            }
           );
-          if (!result?.message?.html) {
+          if (!result?.message?.data) {
             this.isPrinting = false;
             this.alert.createAlert(
               "Message",
-              "Error while getting the HTML document to print for QZ",
+              "Error while getting the document to print for QZ",
               "OK"
             );
             return;
           }
 
-          const print = await printWithQz(this.qz_host, result?.message?.html);
+          const print = await printWithQz(
+            this.qz_host,
+            result.message,
+            this.qz_printer
+          );
 
           if (print === "printed") {
             const updateSuccess = await this.updatePrintTable(invoiceNo);
@@ -593,11 +612,19 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
           this.isPrinting = false;
         }
       } catch (e) {
-        if (e?.custom) {
-          this.isPrinting = false;
-
-          return this.alert.createAlert("Error", e?.title, "OK");
+        // Always leave the "Printing Invoice" state, whatever failed.
+        this.isPrinting = false;
+        console.error("Print failed:", e);
+        if (e && typeof e === "object" && "alert" in e) return; // network branch already alerted
+        let message = e?.custom ? [e.title, e.message].filter(Boolean).join(": ") : e?.message;
+        if (!message && e?._server_messages) {
+          try {
+            message = JSON.parse(JSON.parse(e._server_messages)[0]).message;
+          } catch {
+            // fall through to the generic message
+          }
         }
+        return this.alert.createAlert("Error", message || "Printing failed", "OK");
       }
     },
     async updatePrintTable(invoiceNo, maxRetries = 3) {
@@ -645,17 +672,6 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
         "OK"
       );
       return false;
-    },
-
-    loadPrinter: async function (qz_host) {
-      try {
-        const res = await loadQzPrinter(url, qz_host);
-        print(qz_host);
-        if (res === "success")
-          this.notification.createNotification("Printer loaded");
-      } catch (err) {
-        this.alert.createAlert("Message", err.message, "OK");
-      }
     },
 
     showCancelInvoiceModal() {

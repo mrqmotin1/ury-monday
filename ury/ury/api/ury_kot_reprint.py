@@ -64,7 +64,15 @@ def reprint_kot(invoice_number):
 
         if not kot_print_format:
             frappe.throw("No KOT Reprint Print Format is set in POS Profile.")
-        
+
+        from ury.ury.api.qz_print_jobs import is_qz_profile, queue_qz_print
+
+        if is_qz_profile(pos_profile):
+            # QZ Print: an open POS prints it on the POS Profile's POS Printer.
+            if not queue_qz_print(pos_profile, pos_invoice, kot_print_format, "KOT Reprint", title=f"KOT reprint {invoice_number}"):
+                frappe.throw("Could not prepare the KOT reprint. Check the Reprint KOT Format.")
+            return "Success"
+
         printer = table_order_printer if order_type == "Dine In" else parcel_order_printer
 
         if not printer:
@@ -76,6 +84,8 @@ def reprint_kot(invoice_number):
 
         return "Success"
 
+    except frappe.ValidationError:
+        raise
     except Exception as e:
         error_message = f"KOT Reprint Error for Invoice {invoice_number}: {str(e)}"
         frappe.log_error(error_message, "KOT Reprint Error")
@@ -83,7 +93,5 @@ def reprint_kot(invoice_number):
 
 
 def print_kot(printer,docname, kot_print_format):
-    try:
-        print_by_server("POS Invoice",docname, printer, kot_print_format)
-    except Exception as e:
-        frappe.log_error(f"KOT Reprint Error: {e}")
+    # Let failures reach reprint_kot so it reports them instead of "Success".
+    print_by_server("POS Invoice",docname, printer, kot_print_format)

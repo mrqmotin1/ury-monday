@@ -3,8 +3,8 @@
     {
      "docstatus": 0,
      "doctype": "Custom HTML Block",
-     "html":"<a href=\"/pos\">\n    <img class=\"uryposlogo\" src=\"/assets/ury/Images/URY-POS.jpg\"/>\n</a>",
-     "modified": "2025-07-24 16:50:40.049812",
+     "html":"<a href=\"/pos\" aria-label=\"Monday POS\">\n    <img class=\"uryposlogo\" src=\"/assets/ury/images/monday-pos.svg\" alt=\"Monday POS\"/>\n</a>",
+     "modified": "2026-10-06 18:00:00.000000",
      "name": "URY POS",
      "private": 0,
      "roles": [],
@@ -14,8 +14,8 @@
     {
      "docstatus": 0,
      "doctype": "Custom HTML Block",
-     "html": "<a href=\"/urypos\" class=\"container\" ><lable class=\"urypos\">POS V1</lable> </a>",
-     "modified" : "2025-07-24 16:59:46.440258",
+     "html": "<!-- POS V1 link hidden; remove the comment markers to show it again.\n<a href=\"/urypos\" class=\"container\" ><lable class=\"urypos\">POS V1</lable> </a>\n-->",
+     "modified" : "2026-10-06 18:10:00.000000",
      "name": "POS V1",
      "private": 0,
      "roles": [],

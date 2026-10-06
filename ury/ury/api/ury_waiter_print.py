@@ -161,6 +161,20 @@ def print_combined_waiter_order_slip(invoice_id, kot_names, restaurant_table):
 	if not restaurant_table or _is_takeaway_table(restaurant_table):
 		return
 
+	pos_profile = frappe.db.get_value("POS Invoice", invoice_id, "pos_profile")
+	from ury.ury.api.qz_print_jobs import is_qz_profile, queue_qz_print
+
+	if is_qz_profile(pos_profile):
+		# QZ Print: one slip on the POS Profile's POS Printer, only when a
+		# waiter slip format is chosen on the profile.
+		slip_format = frappe.db.get_value("POS Profile", pos_profile, "custom_qz_waiter_slip_format")
+		if not slip_format:
+			return
+		combined_doc = build_combined_kot_doc(kot_names)
+		if combined_doc and combined_doc.kot_items:
+			queue_qz_print(pos_profile, combined_doc, slip_format, "Waiter Slip", title=f"Waiter slip {invoice_id}")
+		return
+
 	room = frappe.db.get_value("URY Table", restaurant_table, "restaurant_room")
 	if not room:
 		return

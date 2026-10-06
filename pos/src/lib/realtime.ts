@@ -8,7 +8,13 @@ let socket: Socket | null = null;
 let socketPromise: Promise<Socket> | null = null;
 let globalSiteName = '';
 
-async function fetchSiteName(): Promise<string> {
+interface SocketTarget {
+  site_name?: string;
+  socketio_port?: number;
+  dev_server?: boolean;
+}
+
+async function fetchSocketTarget(): Promise<SocketTarget> {
   try {
     const response = await fetch('/api/method/ury.ury.api.ury_kot_display.get_site_name', {
       method: 'GET',
@@ -17,22 +23,25 @@ async function fetchSiteName(): Promise<string> {
       },
     });
     const data = await response.json();
-    return data.message?.site_name ?? '';
+    return data.message ?? {};
   } catch (error) {
     console.error('Failed to fetch site name:', error);
-    return '';
+    return {};
   }
 }
 
 async function createSocket(): Promise<Socket> {
-  const site = await fetchSiteName();
+  const target = await fetchSocketTarget();
+  const site = target.site_name ?? '';
   if (!site) {
     throw new Error('Site name is not set. Socket cannot be initialized.');
   }
 
   const host = window.location.hostname;
-  const port = window.location.port;
   const protocol = window.location.protocol;
+  // Same rule as Frappe desk (socketio_client.js get_host): under `bench start`
+  // socket.io has its own port; in production it is served on the site origin.
+  const port = target.dev_server && target.socketio_port ? String(target.socketio_port) : window.location.port;
   const url = port ? `${protocol}//${host}:${port}` : `${protocol}//${host}`;
   const siteUrl = `${url}/${site}`;
 

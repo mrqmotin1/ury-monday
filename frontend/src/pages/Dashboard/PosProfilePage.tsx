@@ -18,6 +18,8 @@ interface PosProfileRecord {
   qz_print?: number;
   qz_host?: string;
   custom_qz_printer?: string;
+  custom_qz_kot_print_format?: string;
+  custom_qz_waiter_slip_format?: string;
   custom_enable_discount?: number;
   custom_multiple_cashier_configuration?: number;
   custom_enable_kot_reprint?: number;
@@ -94,7 +96,7 @@ export const PosProfilePage: React.FC = () => {
 
   const fetchOptions = async () => {
     try {
-      const [companies, warehouses, users, payments, printFormats] = await Promise.all([
+      const [companies, warehouses, users, payments, printFormats, kotPrintFormats] = await Promise.all([
         call<any>('frappe.client.get_list', { doctype: 'Company', fields: ['name'] }),
         call<any>('frappe.client.get_list', { doctype: 'Warehouse', fields: ['name'] }),
         call<any>('frappe.client.get_list', { doctype: 'User', filters: [['name', 'not in', ['Administrator', 'Guest']]], fields: ['name', 'full_name'] }),
@@ -105,6 +107,12 @@ export const PosProfilePage: React.FC = () => {
           fields: ['name'],
           limit_page_length: 0,
         }),
+        call<any>('frappe.client.get_list', {
+          doctype: 'Print Format',
+          filters: [['doc_type', '=', 'URY KOT'], ['disabled', '=', 0]],
+          fields: ['name'],
+          limit_page_length: 0,
+        }),
       ]);
       setOptions({
         companies: companies.message || companies || [],
@@ -112,6 +120,7 @@ export const PosProfilePage: React.FC = () => {
         users: users.message || users || [],
         payments: payments.message || payments || [],
         printFormats: printFormats.message || printFormats || [],
+        kotPrintFormats: kotPrintFormats.message || kotPrintFormats || [],
       });
     } catch (e) {
       console.error('Failed to load options', e);
@@ -187,6 +196,11 @@ export const PosProfilePage: React.FC = () => {
     ...(options.printFormats || []).map((f: any) => ({ value: f.name, label: f.name })),
   ];
 
+  const kotFormatOptions = (emptyLabel: string) => [
+    { value: '', label: emptyLabel },
+    ...(options.kotPrintFormats || []).map((f: any) => ({ value: f.name, label: f.name })),
+  ];
+
   const handleDetectPrinters = async () => {
     setDetectingPrinters(true);
     setQzError('');
@@ -249,6 +263,8 @@ export const PosProfilePage: React.FC = () => {
         qz_print: profile.qz_print || 0,
         qz_host: profile.qz_host || '',
         custom_qz_printer: profile.custom_qz_printer || '',
+        custom_qz_kot_print_format: profile.custom_qz_kot_print_format || '',
+        custom_qz_waiter_slip_format: profile.custom_qz_waiter_slip_format || '',
         custom_enable_discount: profile.custom_enable_discount || 0,
         custom_enable_kot_reprint: profile.custom_enable_kot_reprint || 0,
         custom_multiple_cashier_configuration: profile.custom_multiple_cashier_configuration || 0,
@@ -302,6 +318,8 @@ export const PosProfilePage: React.FC = () => {
         qz_print: form.qz_print ? 1 : 0,
         qz_host: form.qz_host || '',
         custom_qz_printer: form.custom_qz_printer || '',
+        custom_qz_kot_print_format: form.custom_qz_kot_print_format || '',
+        custom_qz_waiter_slip_format: form.custom_qz_waiter_slip_format || '',
         custom_enable_discount: form.custom_enable_discount ? 1 : 0,
         custom_enable_kot_reprint: form.custom_enable_kot_reprint ? 1 : 0,
         custom_multiple_cashier_configuration: form.custom_multiple_cashier_configuration ? 1 : 0,
@@ -340,6 +358,8 @@ export const PosProfilePage: React.FC = () => {
           qz_print: profileForm.qz_print ? 1 : 0,
           qz_host: profileForm.qz_host || '',
           custom_qz_printer: profileForm.custom_qz_printer || '',
+          custom_qz_kot_print_format: profileForm.custom_qz_kot_print_format || '',
+          custom_qz_waiter_slip_format: profileForm.custom_qz_waiter_slip_format || '',
           custom_enable_discount: profileForm.custom_enable_discount,
           custom_enable_kot_reprint: profileForm.custom_enable_kot_reprint,
           custom_multiple_cashier_configuration: profileForm.custom_multiple_cashier_configuration,
@@ -655,6 +675,32 @@ export const PosProfilePage: React.FC = () => {
                               Exact printer name on the QZ PC. Blank uses that PC's default printer.
                             </p>
                             {qzError && <p className="text-[11px] text-red-600 mt-1">{qzError}</p>}
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-gray-700 mb-1.5">KOT Print Format</label>
+                            <SearchableSelect
+                              id="custom_qz_kot_print_format"
+                              strict
+                              disabled={!isEditMode}
+                              value={profileForm.custom_qz_kot_print_format || ''}
+                              onChange={(_, val) => setProfileForm(p => ({ ...p, custom_qz_kot_print_format: val }))}
+                              options={kotFormatOptions('URY KOT (Raw)')}
+                              placeholder="URY KOT (Raw)"
+                            />
+                            <p className="text-[11px] text-gray-500 mt-1">Kitchen tickets print on the POS Printer through an open POS.</p>
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-gray-700 mb-1.5">Waiter Slip Print Format</label>
+                            <SearchableSelect
+                              id="custom_qz_waiter_slip_format"
+                              strict
+                              disabled={!isEditMode}
+                              value={profileForm.custom_qz_waiter_slip_format || ''}
+                              onChange={(_, val) => setProfileForm(p => ({ ...p, custom_qz_waiter_slip_format: val }))}
+                              options={kotFormatOptions('No waiter slip')}
+                              placeholder="No waiter slip"
+                            />
+                            <p className="text-[11px] text-gray-500 mt-1">Combined slip for dine-in order updates. Blank = off.</p>
                           </div>
                         </div>
                       )}
