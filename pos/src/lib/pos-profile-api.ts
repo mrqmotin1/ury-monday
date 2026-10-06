@@ -12,6 +12,7 @@ export interface PosProfileLimited {
   print_format: string | null;
   qz_print: number;
   qz_host: string | null;
+  qz_printer: string | null;
   printer: string | null;
   print_type: string;
   tableAttention: number;
@@ -75,6 +76,7 @@ export interface PosProfileCombined extends PosProfileFull {
   print_format: string | null;
   qz_print: number;
   qz_host: string | null;
+  qz_printer: string | null;
   printer: string | null;
   print_type: string;
   tableAttention: number;
@@ -127,6 +129,7 @@ export async function getCombinedPosProfile(): Promise<PosProfileCombined> {
     print_format: limitedProfile.print_format,
     qz_print: limitedProfile.qz_print,
     qz_host: limitedProfile.qz_host,
+    qz_printer: limitedProfile.qz_printer,
     printer: limitedProfile.printer,
     print_type: limitedProfile.print_type,
     tableAttention: limitedProfile.tableAttention,

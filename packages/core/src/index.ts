@@ -6,6 +6,7 @@ export { parseFrappeError } from './frappe/errors';
 export type { User, PosProfileCombined } from './types';
 export { storage } from './storage';
 export { formatCurrency, formatCompactCurrency, formatInvoiceTime, flt, getCurrencyCode, getCurrencySymbol, getNumberLocale } from './format';
-export { initPrinting, loadQzPrinter, disconnectQzPrinter, printWithQz } from './print/qz';
+export { initPrinting, loadQzPrinter, disconnectQzPrinter, printWithQz, listQzPrinters } from './print/qz';
+export type { QzPrintData } from './print/qz';
 export { validateFieldValue } from './utils/validateField';
 export type { ValidationMessages } from './utils/validateField';

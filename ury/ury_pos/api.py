@@ -711,6 +711,7 @@ def getPosProfile():
     waiter = frappe.session.user
     bill_present = False
     qz_host = None
+    qz_printer = None
     printer = None
     cashier = None
     owner = None
@@ -783,7 +784,8 @@ def getPosProfile():
 
         if qz_print == 1:
             print_type = "qz"
-            qz_host = pos_profiles.qz_host
+            qz_host = pos_profiles.qz_host or "localhost"
+            qz_printer = pos_profiles.get("custom_qz_printer") or None
 
         elif bill_present == True:
             print_type = "network"
@@ -801,6 +803,7 @@ def getPosProfile():
         "print_format": print_format,
         "qz_print": qz_print,
         "qz_host": qz_host,
+        "qz_printer": qz_printer,
         "printer": printer,
         "print_type": print_type,
         "tableAttention": tableAttention,

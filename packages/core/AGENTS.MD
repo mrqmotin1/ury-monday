@@ -65,22 +65,17 @@ All take the shared `User` and `PosProfileCombined` types from `types.ts` (struc
 ### QZ-Tray printing (`print/qz.ts`)
 Transport + signing mechanics only; domain print orchestration (e.g. pos's `printOrder`) stays in the app.
 
-- `initPrinting({ signKey })` — **must be called once at app startup before any print**. The RSA signing key is injected; it lives in the consuming app (e.g. `pos/privateKey.ts`) and must NEVER be moved into `packages/`. `printWithQz` throws a clear error if used uninitialized.
-- `printWithQz(host, html)` — signs (SHA512withRSA via jsrsasign), connects if needed, prints HTML to the default printer.
-- `loadQzPrinter(host)` / `disconnectQzPrinter()` — explicit websocket lifecycle. The certificate is fetched from `/assets/ury/files/cert.pem`.
-
-```ts
-// main.tsx
-import { initPrinting } from '@ury/core';
-import { privateKey } from '../privateKey';
-initPrinting({ signKey: privateKey });
-```
+- **Signing is server-side.** The certificate comes from `ury.ury.api.ury_print.qz_certificate_pem` and each QZ request is signed by `ury.ury.api.ury_print.signature_promise` (SHA512); the private key lives only in site_config / the site `private/` folder and never reaches the browser. No certificate configured → QZ anonymous mode (QZ shows its own Allow prompt).
+- `printWithQz(host, content, printerName?)` — `content` is HTML (string) or `QzPrintData` `{type: 'raw' | 'html', data}` from `ury.ury.api.ury_print.get_qz_print_data`; raw is sent as ESC/POS commands with `forceRaw`. Prints to `printerName` (POS Profile "POS Printer"); blank → the QZ PC's default printer. Unknown name throws, listing available printers.
+- `listQzPrinters(host)` — printer names QZ Tray reports on `host` (admin printer picker).
+- `loadQzPrinter(host)` / `disconnectQzPrinter()` — explicit websocket lifecycle; reconnects when the host changes; uses `wss` on https pages.
+- `initPrinting()` — no-op kept for backwards compatibility; no startup call needed.
 
 ## 4. Rules for agents
 
 - **Import only from the barrel** `'@ury/core'`, never deep paths into `src/`.
 - **Keep it framework-agnostic**: no React, no JSX, no app state, no domain API wrappers (order/table/invoice APIs belong in the app, e.g. `pos/src/lib/`).
-- **Peer deps**: anything imported at module level here must be a `peerDependency` (with a matching `devDependency` for standalone typecheck), and every consuming app must declare it — the barrel pulls all modules, so even a non-printing app currently needs `qz-tray`/`jsrsasign`/`axios` at build time. If that becomes painful, split subpath exports (e.g. `@ury/core/print`) rather than dropping the peers.
-- **No secrets**: keys, certs, and credentials stay in consuming apps and are injected (the `initPrinting` pattern).
+- **Peer deps**: anything imported at module level here must be a `peerDependency` (with a matching `devDependency` for standalone typecheck), and every consuming app must declare it — the barrel pulls all modules, so even a non-printing app currently needs `qz-tray` at build time. If that becomes painful, split subpath exports (e.g. `@ury/core/print`) rather than dropping the peers.
+- **No secrets**: keys and credentials never live in frontend code; QZ signing goes through the backend endpoints above.
 - **Don't rename exports** without updating all consumers (`pos/`, `frontend/`) in the same change; run `yarn workspace @ury/core typecheck` plus each app's `tsc -b` and `yarn build`.
 - `import.meta.env` usage is confined to `frappe/client.ts` — keep it that way (it ties the file to Vite consumers; the factory's explicit `baseUrl` parameter is the escape hatch).

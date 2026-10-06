@@ -46,6 +46,7 @@ export interface PosProfileCombined {
   print_format: string | null;
   qz_print: number;
   qz_host: string | null;
+  qz_printer: string | null;
   printer: string | null;
   print_type: string;
   tableAttention: number;

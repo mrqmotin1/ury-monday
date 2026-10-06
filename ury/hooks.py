@@ -46,6 +46,7 @@ page_js = {"point-of-sale": ["public/js/pos_extend.js"]}
 
 # include js in doctype views
 # doctype_js = {"POS Invoive" : "public/js/pos_print.js"}
+doctype_js = {"POS Profile": "public/js/pos_profile_qz.js"}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -377,6 +378,7 @@ fixtures = [
                     "POS Profile-printer_settings",
                     "POS Profile-qz_print",
                     "POS Profile-qz_host",
+                    "POS Profile-custom_qz_printer",
                     "POS Profile-section_break_tjhrm",
                     "POS Profile-transfer_role_permissions",
                     "POS Profile-role_allowed_for_billing",

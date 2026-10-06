@@ -1,5 +1,5 @@
 import { DOCTYPES } from '../data/doctypes';
-import { call, db } from '@ury/core';
+import { call, db, type QzPrintData } from '@ury/core';
 import { OrderStatusType, OrderType } from '../data/order-types';
 import type { Filter } from 'frappe-js-sdk/lib/db/types';
 
@@ -208,25 +208,17 @@ export function mapSplitGroupInvoiceToPOSInvoice(inv: SplitGroupInvoice): POSInv
   };
 }
 
-export async function getInvoicePrintHtml(invoiceId: string, printFormat: string) {
-  try {
-    const response = await call.get<{ message: { html: string } }>(
-      'frappe.www.printview.get_html_and_style',
-      {
-        doc: 'POS Invoice',
-        name: invoiceId,
-        print_format: printFormat,
-        _lang: 'en',
-        no_letterhead: 1,
-        letterhead: "No Letterhead",
-        settings: {}
-      }
-    );
-    return response.message.html;
-  } catch (error) {
-    console.error('Error fetching invoice print HTML:', error);
-    throw new Error('Failed to fetch invoice print HTML');
-  }
+/**
+ * QZ print output for an invoice: raw commands when the print format has
+ * "Raw Printing" checked, HTML otherwise (decided server-side).
+ */
+export async function getInvoiceQzPrintData(invoiceId: string, printFormat: string): Promise<QzPrintData> {
+  const response = await call.get<{ message: QzPrintData }>('ury.ury.api.ury_print.get_qz_print_data', {
+    doctype: 'POS Invoice',
+    name: invoiceId,
+    print_format: printFormat,
+  });
+  return response.message;
 }
 
 export async function networkPrint(orderId: string, printer: string, printFormat: string) {

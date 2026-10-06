@@ -48,6 +48,7 @@ const baseProfile: PosProfileCombined = {
   print_format: null,
   qz_print: 0,
   qz_host: null,
+  qz_printer: null,
   printer: null,
   print_type: '',
   tableAttention: 0,

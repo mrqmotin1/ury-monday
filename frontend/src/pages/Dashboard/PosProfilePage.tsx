@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useBranchContext } from '../../context/BranchContext';
-import { Printer, Shield, Settings2, Plus, X, ArrowLeft, Edit2, Eye, Layers, Save } from 'lucide-react';
+import { Printer, Shield, Settings2, Plus, X, ArrowLeft, Edit2, Eye, Layers, Save, RefreshCw } from 'lucide-react';
 import { Card, Button, Badge, Input, Spinner, showToast } from '@ury/ui';
 import { Switch } from '../../components/ui/switch';
-import { call } from '@ury/core';
+import { call, listQzPrinters } from '@ury/core';
 import SideDrawer from '../../components/layout/SideDrawer';
 import { SearchableSelect } from '../../components/common/SearchableSelect';
+import { QzCertificateCard } from '../../components/printing/QzCertificateCard';
 
 interface PosProfileRecord {
   name: string;
@@ -14,6 +15,9 @@ interface PosProfileRecord {
   warehouse?: string;
   selling_price_list?: string;
   print_format?: string;
+  qz_print?: number;
+  qz_host?: string;
+  custom_qz_printer?: string;
   custom_enable_discount?: number;
   custom_multiple_cashier_configuration?: number;
   custom_enable_kot_reprint?: number;
@@ -58,7 +62,13 @@ export const PosProfilePage: React.FC = () => {
     selling_price_list: '', print_format: '',
     applicable_for_users: [{ user: '', default: 0 }], payments: [{ mode_of_payment: '', default: 0 }]
   });
-  const [options, setOptions] = useState<any>({ companies: [], warehouses: [], users: [], payments: [] });
+  const [options, setOptions] = useState<any>({ companies: [], warehouses: [], users: [], payments: [], printFormats: [] });
+  // Printers reported by QZ Tray on the admin's QZ host ("Detect printers").
+  const [detectedPrinters, setDetectedPrinters] = useState<string[]>([]);
+  const [detectingPrinters, setDetectingPrinters] = useState(false);
+  const [qzError, setQzError] = useState('');
+  // Auto-detect runs once per opened profile; the Detect button retries.
+  const autoDetectedProfileRef = useRef<string | null>(null);
 
   useEffect(() => {
     setAddForm(prev => ({
@@ -84,17 +94,24 @@ export const PosProfilePage: React.FC = () => {
 
   const fetchOptions = async () => {
     try {
-      const [companies, warehouses, users, payments] = await Promise.all([
+      const [companies, warehouses, users, payments, printFormats] = await Promise.all([
         call<any>('frappe.client.get_list', { doctype: 'Company', fields: ['name'] }),
         call<any>('frappe.client.get_list', { doctype: 'Warehouse', fields: ['name'] }),
         call<any>('frappe.client.get_list', { doctype: 'User', filters: [['name', 'not in', ['Administrator', 'Guest']]], fields: ['name', 'full_name'] }),
         call<any>('frappe.client.get_list', { doctype: 'Mode of Payment', fields: ['name'] }),
+        call<any>('frappe.client.get_list', {
+          doctype: 'Print Format',
+          filters: [['doc_type', '=', 'POS Invoice'], ['disabled', '=', 0]],
+          fields: ['name'],
+          limit_page_length: 0,
+        }),
       ]);
       setOptions({
         companies: companies.message || companies || [],
         warehouses: warehouses.message || warehouses || [],
         users: users.message || users || [],
-        payments: payments.message || payments || []
+        payments: payments.message || payments || [],
+        printFormats: printFormats.message || printFormats || [],
       });
     } catch (e) {
       console.error('Failed to load options', e);
@@ -165,6 +182,36 @@ export const PosProfilePage: React.FC = () => {
     }
   };
 
+  const printFormatOptions = [
+    { value: '', label: 'Standard' },
+    ...(options.printFormats || []).map((f: any) => ({ value: f.name, label: f.name })),
+  ];
+
+  const handleDetectPrinters = async () => {
+    setDetectingPrinters(true);
+    setQzError('');
+    try {
+      const host = profileForm.qz_host || 'localhost';
+      const printers = await listQzPrinters(host);
+      setDetectedPrinters(printers);
+      if (!printers.length) setQzError(`QZ Tray on ${host} reports no printers.`);
+    } catch (err: any) {
+      setDetectedPrinters([]);
+      setQzError(`Could not reach QZ Tray on ${profileForm.qz_host || 'localhost'}: ${err?.message || err}`);
+    } finally {
+      setDetectingPrinters(false);
+    }
+  };
+
+  useEffect(() => {
+    const profileName = selectedProfile?.name;
+    if (!profileName || activeDetailTab !== 'print_settings' || !isEditMode || !profileForm.qz_print) return;
+    if (autoDetectedProfileRef.current === profileName) return;
+    autoDetectedProfileRef.current = profileName;
+    handleDetectPrinters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProfile?.name, activeDetailTab, isEditMode, profileForm.qz_print]);
+
   const fetchProfiles = async () => {
     setLoading(true);
     try {
@@ -199,6 +246,9 @@ export const PosProfilePage: React.FC = () => {
         warehouse: profile.warehouse || '',
         selling_price_list: profile.selling_price_list || '',
         print_format: profile.print_format || '',
+        qz_print: profile.qz_print || 0,
+        qz_host: profile.qz_host || '',
+        custom_qz_printer: profile.custom_qz_printer || '',
         custom_enable_discount: profile.custom_enable_discount || 0,
         custom_enable_kot_reprint: profile.custom_enable_kot_reprint || 0,
         custom_multiple_cashier_configuration: profile.custom_multiple_cashier_configuration || 0,
@@ -212,6 +262,9 @@ export const PosProfilePage: React.FC = () => {
       };
       setProfileForm(initialForm);
       setOriginalProfileForm(initialForm);
+      setDetectedPrinters([]);
+      setQzError('');
+      autoDetectedProfileRef.current = null;
     } catch {
       setSelectedProfile(null);
     }
@@ -246,6 +299,9 @@ export const PosProfilePage: React.FC = () => {
         warehouse: form.warehouse || '',
         selling_price_list: form.selling_price_list || '',
         print_format: form.print_format || '',
+        qz_print: form.qz_print ? 1 : 0,
+        qz_host: form.qz_host || '',
+        custom_qz_printer: form.custom_qz_printer || '',
         custom_enable_discount: form.custom_enable_discount ? 1 : 0,
         custom_enable_kot_reprint: form.custom_enable_kot_reprint ? 1 : 0,
         custom_multiple_cashier_configuration: form.custom_multiple_cashier_configuration ? 1 : 0,
@@ -281,6 +337,9 @@ export const PosProfilePage: React.FC = () => {
           warehouse: profileForm.warehouse,
           selling_price_list: profileForm.selling_price_list,
           print_format: profileForm.print_format,
+          qz_print: profileForm.qz_print ? 1 : 0,
+          qz_host: profileForm.qz_host || '',
+          custom_qz_printer: profileForm.custom_qz_printer || '',
           custom_enable_discount: profileForm.custom_enable_discount,
           custom_enable_kot_reprint: profileForm.custom_enable_kot_reprint,
           custom_multiple_cashier_configuration: profileForm.custom_multiple_cashier_configuration,
@@ -451,11 +510,14 @@ export const PosProfilePage: React.FC = () => {
                     </div>
                     <div>
                       <label className="block font-semibold text-gray-700 mb-1.5">Print Format</label>
-                      <Input
+                      <SearchableSelect
+                        id="profile_print_format"
+                        strict
                         disabled={!isEditMode}
                         value={profileForm.print_format || ''}
-                        onChange={(e) => setProfileForm(p => ({ ...p, print_format: e.target.value }))}
-                        placeholder="Default"
+                        onChange={(_, val) => setProfileForm(p => ({ ...p, print_format: val }))}
+                        options={printFormatOptions}
+                        placeholder="Standard"
                       />
                     </div>
                   </div>
@@ -526,29 +588,79 @@ export const PosProfilePage: React.FC = () => {
                   </h4>
                   <div className="space-y-4">
                     <div>
-                      <label className="block font-semibold text-gray-700 mb-1.5">Default Print Format</label>
-                      <Input
+                      <label className="block font-semibold text-gray-700 mb-1.5">Receipt Print Format</label>
+                      <SearchableSelect
+                        id="print_tab_print_format"
+                        strict
                         disabled={!isEditMode}
                         value={profileForm.print_format || ''}
-                        onChange={(e) => setProfileForm(p => ({ ...p, print_format: e.target.value }))}
-                        placeholder="Default"
+                        onChange={(_, val) => setProfileForm(p => ({ ...p, print_format: val }))}
+                        options={printFormatOptions}
+                        placeholder="Standard"
                       />
+                      <p className="text-[11px] text-gray-500 mt-1">Layout used for POS Invoice receipts (QZ, network and browser printing).</p>
                     </div>
 
-                    <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 text-xs space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-gray-900 flex items-center gap-1.5">
+                    <div className="p-4 rounded-lg bg-gray-50 border border-gray-200 text-xs space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="qz_print"
+                          disabled={!isEditMode}
+                          checked={!!profileForm.qz_print}
+                          onCheckedChange={(checked) => setProfileForm(p => ({ ...p, qz_print: checked ? 1 : 0 }))}
+                        />
+                        <label htmlFor="qz_print" className="font-bold text-gray-900 flex items-center gap-1.5 cursor-pointer">
                           <Printer className="w-4 h-4 text-primary" />
-                          QZ Tray Hardware Printing & KOT Routing
-                        </span>
-                        <Badge variant="outline" className="border-primary/20 bg-primary/10 text-primary">
-                          Direct Thermal Ready
-                        </Badge>
+                          Print receipts with QZ Tray
+                        </label>
                       </div>
-                      <p className="text-gray-600">
-                        Bill printer and KOT kitchen printer configuration are loaded automatically from POS Profile events and URY Printer Mappings.
-                      </p>
+
+                      {!!profileForm.qz_print && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block font-semibold text-gray-700 mb-1.5">QZ Host</label>
+                            <Input
+                              disabled={!isEditMode}
+                              value={profileForm.qz_host || ''}
+                              onChange={(e) => setProfileForm(p => ({ ...p, qz_host: e.target.value }))}
+                              placeholder="localhost"
+                            />
+                            <p className="text-[11px] text-gray-500 mt-1">PC running QZ Tray. Use localhost when QZ runs on the cashier PC.</p>
+                          </div>
+                          <div>
+                            <label className="block font-semibold text-gray-700 mb-1.5">POS Printer</label>
+                            <div className="flex gap-2">
+                              <div className="flex-1">
+                                <SearchableSelect
+                                  id="custom_qz_printer"
+                                  disabled={!isEditMode}
+                                  value={profileForm.custom_qz_printer || ''}
+                                  onChange={(_, val) => setProfileForm(p => ({ ...p, custom_qz_printer: val }))}
+                                  options={detectedPrinters.map((name) => ({ value: name, label: name }))}
+                                  placeholder="Default printer"
+                                />
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                disabled={!isEditMode || detectingPrinters}
+                                onClick={handleDetectPrinters}
+                                className="shrink-0"
+                              >
+                                <RefreshCw className={`w-3.5 h-3.5 mr-1 ${detectingPrinters ? 'animate-spin' : ''}`} />
+                                Detect
+                              </Button>
+                            </div>
+                            <p className="text-[11px] text-gray-500 mt-1">
+                              Exact printer name on the QZ PC. Blank uses that PC's default printer.
+                            </p>
+                            {qzError && <p className="text-[11px] text-red-600 mt-1">{qzError}</p>}
+                          </div>
+                        </div>
+                      )}
                     </div>
+
+                    {!!profileForm.qz_print && <QzCertificateCard disabled={!isEditMode} />}
                   </div>
                 </div>
               </div>
@@ -848,7 +960,14 @@ export const PosProfilePage: React.FC = () => {
             </div>
             <div>
               <label className="block font-semibold text-gray-700 mb-1.5">Print Format</label>
-              <Input value={addForm.print_format} onChange={e => setAddForm({...addForm, print_format: e.target.value})} placeholder="Default" />
+              <SearchableSelect
+                id="add_print_format"
+                strict
+                value={addForm.print_format}
+                onChange={(_, val) => setAddForm({ ...addForm, print_format: val })}
+                options={printFormatOptions}
+                placeholder="Standard"
+              />
             </div>
           </div>
 

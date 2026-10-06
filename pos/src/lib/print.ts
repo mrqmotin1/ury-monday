@@ -1,6 +1,6 @@
 import { printWithQz } from '@ury/core';
 import {
-  getInvoicePrintHtml,
+  getInvoiceQzPrintData,
   networkPrint,
   selectNetworkPrinter,
   updatePrintStatus
@@ -14,15 +14,15 @@ interface PrintOrderParams {
 }
 
 export async function printOrder({ orderId, posProfile, printFormat }: PrintOrderParams): Promise<'qz' | 'network' | 'socket'> {
-  const { print_type, qz_host, print_format, printer, name, cashier, multiple_cashier } = posProfile;
+  const { print_type, qz_host, qz_printer, print_format, printer, name, cashier, multiple_cashier } = posProfile;
   const format = printFormat || print_format;
 
   if (print_type === 'qz') {
     if (!qz_host) {
       throw new Error('QZ host is not set');
     }
-    const html = await getInvoicePrintHtml(orderId, format as string);
-    await printWithQz(qz_host, html);
+    const printData = await getInvoiceQzPrintData(orderId, format as string);
+    await printWithQz(qz_host, printData, qz_printer);
     await updatePrintStatus(orderId);
     return 'qz';
   } else if (print_type === 'network') {

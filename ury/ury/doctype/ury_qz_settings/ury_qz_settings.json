@@ -1,0 +1,66 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-10-06 14:00:00.000000",
+ "description": "QZ Tray certificate and private key used to sign print requests, so receipts print without the QZ Allow prompt.",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "setup_help",
+  "certificate",
+  "private_key"
+ ],
+ "fields": [
+  {
+   "fieldname": "setup_help",
+   "fieldtype": "HTML",
+   "label": "Setup",
+   "options": "<p class=\"text-muted small\">Upload the QZ Tray certificate (<code>digital-certificate.txt</code>) and its private key (<code>private-key.pem</code>) as <b>Private</b> files. The private key never leaves the server; it is only used to sign print requests. Then import the same certificate into QZ Tray (Site Manager) on every printing PC.</p>"
+  },
+  {
+   "fieldname": "certificate",
+   "fieldtype": "Attach",
+   "label": "QZ Certificate",
+   "description": "digital-certificate.txt (PEM). Shared with QZ Tray on each printing PC."
+  },
+  {
+   "fieldname": "private_key",
+   "fieldtype": "Attach",
+   "label": "QZ Private Key",
+   "description": "private-key.pem. Upload as a Private file; never shared with browsers."
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-10-06 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "URY",
+ "name": "URY QZ Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "print": 0,
+   "read": 1,
+   "role": "System Manager",
+   "share": 0,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "print": 0,
+   "read": 1,
+   "role": "URY Manager",
+   "share": 0,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

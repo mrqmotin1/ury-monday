@@ -131,7 +131,7 @@ ury/
 
 **Custom fields added to standard ERPNext doctypes** (via `setup.py` + `fixtures/custom_field.json`):
 - `POS Invoice` / `Sales Invoice`: `order_type`, `waiter`, `no_of_pax`, `cashier`, `restaurant`, `branch`, `restaurant_table`, `invoice_printed`, `cancel_reason`, `custom_comments`, `custom_ury_order_number`
-- `POS Profile`: `restaurant`, `branch`, `printer_settings`, `qz_print`, `qz_host`, `enable_discount`, `enable_multiple_cashier`, `reset_order_number_daily`
+- `POS Profile`: `restaurant`, `branch`, `printer_settings`, `qz_print`, `qz_host`, `custom_qz_printer` (POS Printer), `enable_discount`, `enable_multiple_cashier`, `reset_order_number_daily`
 - `POS Opening Entry`: `restaurant`, `branch`, `custom_room`, `custom_rooms`
 - `Branch`: `user` (URY User table), `custom_aggregators`
 - `Customer`: `mobile_number`
@@ -184,8 +184,9 @@ All frontends are served as Frappe web pages. Route rules in `hooks.py` (`websit
 
 ### QZ Tray
 - Thermal printing uses QZ Tray (desktop app). The POS sends signed print jobs.
-- Signing keys: `public/js/sign-message.js` + `jsrsasign-all-min.js`
-- QZ host is configured per POS Profile (`qz_host` field).
+- Signing is server-side (`ury.ury.api.ury_print.signature_promise`, certificate via `qz_certificate_pem`). Cert/key source order: **URY QZ Settings** upload (Single doctype, private files, validated) → site_config `qz_cert` / `qz_private_key` (PEM or path under site `private/`) → File list `qz-certificate.txt` / `qz-private-key.pem` (mon-develop-3 convention). Admin UI: POS Profile → Print Settings → QZ Certificate card (upload, status, download .crt).
+- Per POS Profile: `qz_print` (enable), `qz_host` (PC running QZ Tray, default `localhost`), `custom_qz_printer` (Select "POS Printer", options filled from QZ by `public/js/pos_profile_qz.js` on desk and the admin Detect button; blank = that PC's default), `print_format` (receipt layout).
+- Raw vs HTML is decided by the print format: `get_qz_print_data` returns raw commands when the Print Format has "Raw Printing" checked (sent with `forceRaw`), else HTML. Shipped raw ESC/POS format: **URY POS Receipt (Raw)** (48 col / 80 mm; set `W = 32` for 58 mm). Desk (`public/js/pos_print.js`) and React POS (`@ury/core` `print/qz.ts`) follow the same rules.
 
 ---
 
@@ -200,7 +201,7 @@ All frontends are served as Frappe web pages. Route rules in `hooks.py` (`websit
 
 Shared code for the React apps lives in `packages/`:
 - `@ury/ui` — components (`import { Button, Dialog, ... } from '@ury/ui'`), theme tokens (`@import '@ury/ui/styles/theme.css'`), Tailwind preset (`presets: [preset]` from `@ury/ui/tailwind-preset`). Consumer Tailwind configs must include `"../packages/ui/src/**/*.{ts,tsx}"` in `content`.
-- `@ury/core` — frappe client (`call`/`db`/`auth`), auth/role helpers, `storage`, formatting, QZ print transport. Printing requires `initPrinting({ signKey })` at app startup; the signing key stays in the consuming app (never in `packages/`).
+- `@ury/core` — frappe client (`call`/`db`/`auth`), auth/role helpers, `storage`, formatting, QZ print transport. QZ signing is server-side; no key in frontend code.
 
 Build commands:
 ```bash
