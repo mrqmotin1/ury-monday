@@ -250,9 +250,12 @@ let port = window.location.port;
 let protocol = window.location.protocol;
 let url = port ? `${protocol}//${host}:${port}` : `${protocol}//${host}`;
 window.globalSiteName = '';
-let socket; 
+let socket;
 
-async function fetchAndSetSiteName() {
+// Socket.io lives on the site origin in production, but on its own port
+// (frappe.conf socketio_port, e.g. 9000) under `bench start` -- same rule as
+// Frappe desk. The server tells us which via get_site_name.
+async function initializeSocket() {
     try {
         const response = await fetch('/api/method/ury.ury.api.ury_kot_display.get_site_name', {
             method: 'GET',
@@ -260,33 +263,32 @@ async function fetchAndSetSiteName() {
                 'Content-Type': 'application/json'
             }
         });
-        const data = await response.json();
-        window.globalSiteName = data.message.site_name;
-        // console.log('Global Site Name:', window.globalSiteName);
-    } catch (error) {
-        console.error('Failed to fetch site name:', error);
-    }
-}
-
-async function initializeSocket() {
-    await fetchAndSetSiteName();
-    if (window.globalSiteName) {
-        let site = window.globalSiteName;
-        let site_url = `${url}/${site}`;
-        socket = io(site_url,{ withCredentials: true });
-        console.log("socket == >",socket)
+        const target = (await response.json()).message || {};
+        window.globalSiteName = target.site_name || '';
+        if (!window.globalSiteName) {
+            console.error('Site name is not set. Socket cannot be initialized.');
+            return null;
+        }
+        const socketPort = target.dev_server && target.socketio_port ? String(target.socketio_port) : port;
+        const socketUrl = socketPort ? `${protocol}//${host}:${socketPort}` : `${protocol}//${host}`;
+        socket = io(`${socketUrl}/${window.globalSiteName}`, { withCredentials: true });
         socket.on('connect_error', (err) => {
             console.error("Socket connection error:", err);
-        }); 
+        });
         socket.on('connect', () => {
             console.log('Socket connected:', socket.connected);
         });
-    } else {
-        console.error('Site name is not set. Socket cannot be initialized.');
+        return socket;
+    } catch (error) {
+        console.error('Failed to initialize socket:', error);
+        return null;
     }
 }
 
-initializeSocket(); // Initialize the socket after fetching the site name
+// Listeners wait for this instead of assuming `socket` is already set.
+const socketReady = initializeSocket();
+// Safety net: re-sync KOTs this often even if a live event was missed.
+const KOT_REFRESH_MS = 30000;
 
 
 const frappe = new FrappeApp(url);
@@ -317,6 +319,16 @@ export default {
     };
   },
   methods: {
+    // Re-sync KOTs every KOT_REFRESH_MS while the screen is visible, so the
+    // display stays current even if a live socket event was missed.
+    startKotRefresh() {
+      if (this.kotRefreshTimer) return;
+      this.kotRefreshTimer = setInterval(() => {
+        if (document.visibilityState === "visible") {
+          this.fetchKOT().then(() => this.masonryLoading()).catch(() => {});
+        }
+      }, KOT_REFRESH_MS);
+    },
     playAlertSound(path) {
       var currentDomain = window.location.origin;
       var audio_path = currentDomain + path;
@@ -619,6 +631,14 @@ export default {
           if (this.audio_alert === 1) {
             this.showAudioAlertMessage = true;
           }
+          this.startKotRefresh();
+          return socketReady;
+        }).then((socket) => {
+          if (!socket) return;
+          // Re-sync after every reconnect: events sent while offline are lost.
+          socket.on('connect', () => {
+            this.fetchKOT().then(() => this.masonryLoading());
+          });
           socket.on(this.kot_channel, (doc) => {
             if (this.audio_alert === 1) {
               this.playAlertSound(doc.audio_file);
@@ -631,7 +651,10 @@ export default {
                 });
               }
             }
-            this.kot.unshift(doc.kot);
+            // Skip if a refresh already brought this KOT in.
+            if (!this.kot.some((k) => k.name === doc.kot.name)) {
+              this.kot.unshift(doc.kot);
+            }
             this.masonryLoading();
             this.updateQtyColorTable();
             this.updateTimeRemaining();
@@ -670,10 +693,12 @@ export default {
       });
     setInterval(this.updateTimeRemaining, 60000);
   },
-  beforeDestroy() {
+  // Vue 3 lifecycle name (beforeDestroy is never called in Vue 3).
+  beforeUnmount() {
     window.removeEventListener("online", this.handleOnline);
     window.removeEventListener("offline", this.handleOffline);
     document.removeEventListener("click", this.hideAudioAlertMessage);
+    clearInterval(this.kotRefreshTimer);
   },
   computed: {
     sortedKotItems() {
