@@ -44,7 +44,7 @@ function App() {
             <Router basename="/pos">
               <Routes>
                 <Route element={<AppLayout />}>
-                  <Route index element={<Navigate to="/dashboard" replace />} />
+                  <Route index element={<Navigate to="/pos" replace />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/pos" element={<POS />} />
                   <Route path="/tables" element={<Table />} />
