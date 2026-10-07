@@ -25,6 +25,10 @@ const Header = () => {
   const location = useLocation();
   const { searchQuery, setSearchQuery, setShowVoluntaryClosing, posProfile, canCloseShift } = usePOSStore();
   const counterName = posProfile?.name ? `${t('header.counter')}-${posProfile.name}` : '';
+  // Same roles the dashboard app (/ury) admits.
+  const canSwitchToDashboard =
+    user?.name === 'Administrator' ||
+    (user?.roles ?? []).some((role) => role === 'URY Manager' || role === 'System Manager');
   const { orderSearchQuery, setOrderSearchQuery } = useRootStore();
   const [orderSearchInput, setOrderSearchInput] = useState(orderSearchQuery);
 
@@ -161,11 +165,13 @@ const Header = () => {
             {/* User dropdown */}
             {showUserMenu && (
               <div className="absolute end-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                {/* Counter + name already show on the menu button; hidden here to avoid showing them twice.
                 <div className="p-4 border-b border-gray-200">
                   {counterName && <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{counterName}</p>}
                   <p className="text-sm font-medium text-gray-900">{user?.full_name || 'User'}</p>
                   <p className="text-sm text-gray-500">{user?.name || ''}</p>
                 </div>
+                */}
                 <div className="py-2">
                   {canCloseShift && (
                     <Button
@@ -177,14 +183,16 @@ const Header = () => {
                       {t('header.close_shift')}
                     </Button>
                   )}
-                  <Button
-                    variant="ghost"
-                    className="flex justify-start items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    onClick={() => window.location.href = '/ury/dashboard'}
-                  >
-                    <Monitor className="w-4 h-4 me-3" />
-                    Switch to Dashboard
-                  </Button>
+                  {canSwitchToDashboard && (
+                    <Button
+                      variant="ghost"
+                      className="flex justify-start items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      onClick={() => window.location.href = '/ury/dashboard'}
+                    >
+                      <Monitor className="w-4 h-4 me-3" />
+                      Switch to Dashboard
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     className="flex justify-start items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
