@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 80" role="img" aria-label="Monday Kitchen">
+  <text x="0" y="56" font-family="Inter, 'Segoe UI', Arial, sans-serif" font-size="52" letter-spacing="-1">
+    <tspan font-weight="800" fill="#2563EB">Monday</tspan><tspan dx="12" font-weight="400" fill="#6B7280">Kitchen</tspan>
+  </text>
+</svg>
