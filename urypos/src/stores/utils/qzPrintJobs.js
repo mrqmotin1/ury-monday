@@ -13,7 +13,7 @@ const call = frappe.call();
 let socket = null;
 let listening = null;
 
-async function getSocket() {
+export async function getSocket() {
   if (socket) return socket;
   const res = await fetch("/api/method/ury.ury.api.ury_kot_display.get_site_name");
   const target = (await res.json())?.message || {};
@@ -68,5 +68,16 @@ export async function startQzPrintJobListener(profile, onError) {
       onError?.(`${job.title}: ${[err?.title, err?.message].filter(Boolean).join(" - ") || err}`);
       call.post("ury.ury.api.qz_print_jobs.release_qz_print_job", { job_id: event.job_id }).catch(() => {});
     }
+  });
+}
+
+/**
+ * Shared shift: when anyone closes this POS Profile's shift (any device),
+ * call `onClosed(closedBy)` so this screen can return to the opening step.
+ */
+export async function startShiftListener(branch, posProfile, onClosed) {
+  const s = await getSocket();
+  s.on(`pos_shift_${branch}`, (event) => {
+    if (event?.pos_profile === posProfile && event.event === "closed") onClosed?.(event.closed_by);
   });
 }

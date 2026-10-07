@@ -30,7 +30,8 @@
     "close_shift": "Close Shift",
     "switch_to_desk": "Switch To Desk",
     "clear_cache": "Clear Cache",
-    "logout": "Logout"
+    "logout": "Logout",
+    "counter": "Counter"
   },
   "menu": {
     "special_items": "Special Items"
@@ -444,5 +445,8 @@
     "max_note": "Maximum allowed: {{max}}%",
     "printed_note": "The bill is already printed. Only a manager can change the discount, and the bill must be printed again before payment.",
     "button": "Discount"
+  },
+  "shift": {
+    "closed_by": "Shift was closed by {{name}}. Open a new shift to continue."
   }
 }

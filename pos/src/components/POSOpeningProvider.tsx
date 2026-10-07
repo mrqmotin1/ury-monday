@@ -14,6 +14,9 @@ import POSOpeningScreen from './POSOpeningScreen';
 import ChecklistGateDialog from './ChecklistGateDialog';
 import POSClosingDialog from './POSClosingDialog';
 import { t } from '../i18n';
+import type { Socket } from 'socket.io-client';
+import { showToast } from '@ury/ui';
+import { getRealtimeSocket } from '../lib/realtime';
 
 interface POSOpeningProviderProps {
   children: React.ReactNode;
@@ -69,7 +72,7 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
   // telling them to contact a manager.
   const [showClosingDialog, setShowClosingDialog] = useState(false);
 
-  const { posProfile, showVoluntaryClosing, setShowVoluntaryClosing } = usePOSStore();
+  const { posProfile, showVoluntaryClosing, setShowVoluntaryClosing, setCanCloseShift } = usePOSStore();
   const { user } = useRootStore();
 
   const canAccessDesk = useMemo(() => hasDeskAccess(user), [user]);
@@ -97,7 +100,8 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
     setNeedsOpeningChecklist(false);
 
     try {
-      const response = await checkPOSOpening(user?.name);
+      const response = await checkPOSOpening(posProfile.name);
+      setCanCloseShift(!!response.can_close);
 
       // No open entry for this user -> show the native opening screen.
       if (response.message === 1) {
@@ -199,7 +203,7 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
 
       setIsLoading(false);
     }
-  }, [posProfile, user?.name, clearBlockingState]);
+  }, [posProfile, user?.name, clearBlockingState, setCanCloseShift]);
 
   const handleOpeningSuccess = useCallback(() => {
     clearBlockingState();
@@ -216,6 +220,40 @@ const POSOpeningProvider = ({ children }: POSOpeningProviderProps) => {
       checkPOSStatus();
     }
   }, [posProfile, checkPOSStatus]);
+
+  // Shared shift: when anyone closes (or opens) this profile's shift on
+  // another device, re-check so this screen shows (or leaves) the opening
+  // screen without a reload.
+  useEffect(() => {
+    const branch = posProfile?.branch;
+    const profileName = posProfile?.name;
+    if (!branch || !profileName) return;
+
+    const channel = `pos_shift_${branch}`;
+    let activeSocket: Socket | null = null;
+    let cancelled = false;
+    const handler = (event: { event?: string; pos_profile?: string; closed_by?: string }) => {
+      if (event?.pos_profile !== profileName) return;
+      if (event.event === 'closed') {
+        setShowVoluntaryClosing(false);
+        showToast.info(t('shift.closed_by', { name: event.closed_by || '' }));
+      }
+      checkPOSStatus();
+    };
+
+    getRealtimeSocket()
+      .then((socket) => {
+        if (cancelled) return;
+        activeSocket = socket;
+        socket.on(channel, handler);
+      })
+      .catch((error) => console.error('Failed to subscribe to shift events:', error));
+
+    return () => {
+      cancelled = true;
+      activeSocket?.off(channel, handler);
+    };
+  }, [posProfile?.branch, posProfile?.name, checkPOSStatus, setShowVoluntaryClosing]);
 
   if (isLoading) {
     return (

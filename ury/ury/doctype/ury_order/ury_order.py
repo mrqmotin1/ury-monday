@@ -1485,7 +1485,15 @@ def sync_order(
         else:
             invoice.cashier = pos_opened_cashier
     else:
-        invoice.cashier = posprofile.applicable_for_users[0].user if posprofile.applicable_for_users else frappe.session.user
+        # Shared shift: the order belongs to the user who opened the shift.
+        from ury.ury_pos.api import get_open_shift
+
+        shift = get_open_shift(posprofile.name)
+        invoice.cashier = (
+            shift.user if shift
+            else posprofile.applicable_for_users[0].user if posprofile.applicable_for_users
+            else frappe.session.user
+        )
 
     if not invoice.waiter:
         invoice.waiter = frappe.session.user
@@ -1701,12 +1709,11 @@ def pos_opening_check():
         """, (branch, room), as_dict=True)
         opening_name = pos_opening_list[0].name if pos_opening_list else None
     else:
-        open_filters = {"branch": branch, "status": "Open", "docstatus": 1}
-        opening_name = frappe.db.get_value(
-            "POS Opening Entry", {**open_filters, "user": frappe.session.user}, "name"
-        ) or frappe.db.get_value(
-            "POS Opening Entry", open_filters, "name", order_by="creation desc"
-        )
+        # Shared shift: everyone of the profile works on its open shift.
+        from ury.ury_pos.api import get_open_shift
+
+        shift = get_open_shift(pos_profile)
+        opening_name = shift.name if shift else None
 
     result = {
         "opening_exists": bool(opening_name),

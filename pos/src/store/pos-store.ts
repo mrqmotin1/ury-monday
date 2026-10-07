@@ -148,6 +148,7 @@ interface POSState {
    * shown as an overlay without unmounting the app underneath it.
    */
   showVoluntaryClosing: boolean;
+  canCloseShift: boolean;
 }
 
 interface POSStore extends POSState {
@@ -212,6 +213,7 @@ interface POSStore extends POSState {
    */
   updateItemComment: (uniqueId: string, comment: string) => void;
   setShowVoluntaryClosing: (show: boolean) => void;
+  setCanCloseShift: (canClose: boolean) => void;
 }
 
 const generateUniqueId = (item: OrderItem): string => {
@@ -320,6 +322,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   isUpdatingOrder: false,
   orderId: null,
   showVoluntaryClosing: false,
+  canCloseShift: false,
   orderComment: '',
   noOfPax: 1,
   lastModifiedTime: null,
@@ -627,6 +630,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   setOrderComment: (comment: string) => set({ orderComment: comment }),
   setNoOfPax: (pax: number) => set({ noOfPax: pax }),
   setShowVoluntaryClosing: (show: boolean) => set({ showVoluntaryClosing: show }),
+  setCanCloseShift: (canClose: boolean) => set({ canCloseShift: canClose }),
 
   processPayment: async (paymentMode: string, amount: number) => {
     try {

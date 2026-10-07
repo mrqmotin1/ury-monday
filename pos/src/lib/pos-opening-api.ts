@@ -11,6 +11,8 @@ export interface POSOpeningEntryRef {
 
 export interface POSOpeningResponse {
   message: number | POSOpeningEntryRef[];
+  /** Current user may close the shift (POS Closing Entry create + submit). */
+  can_close?: boolean;
 }
 
 export interface POSCloseValidationResponse {
@@ -114,21 +116,20 @@ export const parseFrappeError = (error: unknown): string | null => {
 };
 
 /**
- * Check whether the current user already has an open POS Opening Entry.
+ * Open shift the current user works on.
  *
- * Uses ERPNext's user-wide `check_opening_entry` rather than the branch-wide
- * URY `posOpening()` method, so multi-cashier branches still require each
- * cashier to open their own session.
+ * Single-cashier POS Profiles share one open shift between all their users
+ * (cashier, captain, manager): anyone who logs in joins it. Multi-cashier
+ * profiles still require each cashier's own session (server decides).
  */
-export const checkPOSOpening = async (user?: string): Promise<POSOpeningResponse> => {
+export const checkPOSOpening = async (posProfile: string): Promise<POSOpeningResponse> => {
   try {
-    const params = user ? { user } : undefined;
-    const response = await call.get<POSOpeningResponse>(
-      'erpnext.selling.page.point_of_sale.point_of_sale.check_opening_entry',
-      params
+    const response = await call.get<{ message: { open_entries: POSOpeningEntryRef[]; can_close: boolean } }>(
+      'ury.ury_pos.api.get_pos_shift',
+      { pos_profile: posProfile }
     );
 
-    return response;
+    return { message: response.message.open_entries, can_close: response.message.can_close };
   } catch (error) {
     console.error('Error checking POS opening status:', error);
     throw error;

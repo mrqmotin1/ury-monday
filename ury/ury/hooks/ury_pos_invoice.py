@@ -19,7 +19,37 @@ def validate(doc, method):
 def before_submit(doc, method):
     calculate_and_set_times(doc, method)
     validate_invoice_print(doc, method)
+    assign_to_shared_shift(doc, method)
     ro_reload_submit(doc, method)
+
+
+def _shared_shift_user(doc):
+    from ury.ury_pos.api import get_open_shift, is_shared_shift_profile
+
+    if not is_shared_shift_profile(doc.pos_profile):
+        return None
+    shift = get_open_shift(doc.pos_profile)
+    return shift.user if shift else None
+
+
+def assign_to_shared_shift(doc, method):
+    """Single-cashier profiles share one open shift: the paid order's cashier
+    is the shift's user. (Owner is moved in on_submit.)"""
+    shift_user = _shared_shift_user(doc)
+    if shift_user:
+        doc.cashier = shift_user
+
+
+def assign_owner_to_shared_shift(doc):
+    """Hand the paid order to the shared shift's user so that shift's POS
+    Closing collects it: ERPNext closing only picks (and accepts) invoices
+    whose owner is the shift user. Frappe forbids changing `owner` through a
+    document save, so it is written directly. Whoever took the order stays in
+    `waiter`."""
+    shift_user = _shared_shift_user(doc)
+    if shift_user and doc.owner != shift_user:
+        frappe.db.set_value("POS Invoice", doc.name, "owner", shift_user, update_modified=False)
+        doc.owner = shift_user
 
 
 def on_trash(doc, method):
@@ -297,6 +327,7 @@ def on_update(doc, method):
 
 
 def on_submit(doc, method):
+    assign_owner_to_shared_shift(doc)
     sync_merged_invoice(doc)
     release_merged_tables(doc)
 

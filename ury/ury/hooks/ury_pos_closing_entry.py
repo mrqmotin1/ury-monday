@@ -71,3 +71,19 @@ def validate_cashier(doc, method):
     else:
         pass
     
+
+
+def publish_shift_closed(doc, method):
+    """Tell every open POS of the branch the shift closed, so other devices
+    show the opening popup without a reload."""
+    branch = frappe.db.get_value("POS Profile", doc.pos_profile, "branch")
+    frappe.publish_realtime(
+        f"pos_shift_{branch}",
+        {
+            "event": "closed",
+            "pos_profile": doc.pos_profile,
+            "opening_entry": doc.pos_opening_entry,
+            "closed_by": frappe.db.get_value("User", frappe.session.user, "full_name") or frappe.session.user,
+        },
+        after_commit=True,
+    )

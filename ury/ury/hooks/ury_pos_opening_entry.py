@@ -61,3 +61,13 @@ def main_pos_open_check(doc,method):
             return flag
     else:
         pass
+
+
+def publish_shift_opened(doc, method):
+    """Tell every open POS of the branch a shift opened (dismisses their
+    opening popup when they share this profile's shift)."""
+    frappe.publish_realtime(
+        f"pos_shift_{doc.branch}",
+        {"event": "opened", "pos_profile": doc.pos_profile, "opening_entry": doc.name, "user": doc.user},
+        after_commit=True,
+    )

@@ -23,7 +23,8 @@ const Header = () => {
   const user = useRootStore((state: RootState) => state.user);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
-  const { searchQuery, setSearchQuery, setShowVoluntaryClosing } = usePOSStore();
+  const { searchQuery, setSearchQuery, setShowVoluntaryClosing, posProfile, canCloseShift } = usePOSStore();
+  const counterName = posProfile?.name ? `${t('header.counter')}-${posProfile.name}` : '';
   const { orderSearchQuery, setOrderSearchQuery } = useRootStore();
   const [orderSearchInput, setOrderSearchInput] = useState(orderSearchQuery);
 
@@ -150,7 +151,10 @@ const Header = () => {
               <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center">
                 <User className="w-4 h-4 text-white" />
               </div>
-              <span className="text-sm font-medium">{user?.full_name || 'User'}</span>
+              <span className="flex flex-col items-start leading-tight text-start">
+                {counterName && <span className="text-sm font-semibold text-gray-900">{counterName}</span>}
+                <span className={counterName ? 'text-xs text-gray-500' : 'text-sm font-medium'}>{user?.full_name || 'User'}</span>
+              </span>
               <ChevronDown className="w-4 h-4" />
             </Button>
 
@@ -158,18 +162,21 @@ const Header = () => {
             {showUserMenu && (
               <div className="absolute end-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                 <div className="p-4 border-b border-gray-200">
+                  {counterName && <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{counterName}</p>}
                   <p className="text-sm font-medium text-gray-900">{user?.full_name || 'User'}</p>
                   <p className="text-sm text-gray-500">{user?.name || ''}</p>
                 </div>
                 <div className="py-2">
-                  <Button
-                    variant="ghost"
-                    className="flex justify-start items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    onClick={handleCloseShift}
-                  >
-                    <Lock className="w-4 h-4 me-3" />
-                    {t('header.close_shift')}
-                  </Button>
+                  {canCloseShift && (
+                    <Button
+                      variant="ghost"
+                      className="flex justify-start items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                      onClick={handleCloseShift}
+                    >
+                      <Lock className="w-4 h-4 me-3" />
+                      {t('header.close_shift')}
+                    </Button>
+                  )}
                   <Button
                     variant="ghost"
                     className="flex justify-start items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"

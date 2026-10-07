@@ -988,6 +988,59 @@ def create_customer(customer_name, mobile_number=None, customer_group=None, terr
             "message": str(e)
         }
 
+def is_shared_shift_profile(pos_profile):
+    """Single-cashier profiles share one open shift between all their users
+    (cashier, captain, manager). Multi-cashier profiles keep per-user shifts."""
+    return bool(pos_profile) and not frappe.db.get_value(
+        "POS Profile", pos_profile, "custom_enable_multiple_cashier"
+    )
+
+
+def get_open_shift(pos_profile):
+    """The open (submitted) POS Opening Entry of a POS Profile, latest first."""
+    if not pos_profile:
+        return None
+    shifts = frappe.get_all(
+        "POS Opening Entry",
+        filters={"pos_profile": pos_profile, "status": "Open", "docstatus": 1},
+        fields=["name", "user", "company", "pos_profile", "period_start_date", "branch"],
+        order_by="period_start_date desc",
+        limit=1,
+    )
+    return shifts[0] if shifts else None
+
+
+def can_close_shift():
+    return bool(
+        frappe.has_permission("POS Closing Entry", "create")
+        and frappe.has_permission("POS Closing Entry", "submit")
+    )
+
+
+@frappe.whitelist()
+def get_pos_shift(pos_profile):
+    """Shift state for the POS gate: the profile's shared open shift (any
+    user may join it) and whether the current user may close it."""
+    if frappe.session.user == "Guest":
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+    if is_shared_shift_profile(pos_profile):
+        shift = get_open_shift(pos_profile)
+        open_entries = [shift] if shift else []
+    else:
+        open_entries = frappe.get_all(
+            "POS Opening Entry",
+            filters={"user": frappe.session.user, "status": "Open", "docstatus": 1},
+            fields=["name", "user", "company", "pos_profile", "period_start_date", "branch"],
+            order_by="period_start_date desc",
+        )
+
+    if open_entries:
+        open_entries[0]["user_full_name"] = frappe.db.get_value("User", open_entries[0].user, "full_name")
+
+    return {"open_entries": open_entries, "can_close": can_close_shift()}
+
+
 @frappe.whitelist()
 def get_open_pos_opening_entries(pos_profile):
     """Currently open (status=Open, submitted) POS Opening Entries for the
@@ -1163,6 +1216,15 @@ def create_pos_opening_entry(pos_profile: str, company: str, balance_details) ->
 
     pos_profile_doc = frappe.get_doc("POS Profile", pos_profile)
 
+    if is_shared_shift_profile(pos_profile):
+        shift = get_open_shift(pos_profile)
+        if shift:
+            frappe.throw(
+                _("A shift is already open on {0} (opened by {1}). Continue on that shift.").format(
+                    pos_profile, frappe.db.get_value("User", shift.user, "full_name") or shift.user
+                )
+            )
+
     if not pos_profile_doc.branch:
         frappe.throw(_("Selected POS Profile has no Branch."))
     if not pos_profile_doc.restaurant:
@@ -1273,8 +1335,10 @@ def get_pos_opening_screen_data() -> dict:
     can_create = bool(frappe.has_permission("POS Opening Entry", "create"))
     can_submit = bool(frappe.has_permission("POS Opening Entry", "submit"))
 
-    # Existing open entries for the current user (user-wide check).
-    open_entries = frappe.get_all(
+    # Single-cashier profiles: the profile's shared shift (any user joins it).
+    # Multi-cashier: the current user's own open entries (user-wide check).
+    shared_shift = get_open_shift(pos_profile_name) if is_shared_shift_profile(pos_profile_name) else None
+    open_entries = [shared_shift] if shared_shift else frappe.get_all(
         "POS Opening Entry",
         filters={
             "user": user,
@@ -1325,7 +1389,7 @@ def get_pos_opening_screen_data() -> dict:
         "payment_modes": payment_modes,
         "daily_close_pending": daily_close_pending,
         "multi_cashier": multi_cashier,
-        "permissions": {"create": can_create, "submit": can_submit},
+        "permissions": {"create": can_create, "submit": can_submit, "close": can_close_shift()},
         "open_entries": open_entries,
     }
 

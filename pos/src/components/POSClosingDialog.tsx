@@ -207,7 +207,13 @@ const POSClosingDialog = ({ open, onOpenChange, onClosingSubmitted }: POSClosing
 
     try {
       const openEntries = await getOpenPosOpeningEntries(posProfile.name);
-      const ownEntry = openEntries.find((entry) => entry.user === user.name) ?? null;
+      // Single-cashier profiles share one shift: close it whoever opened it
+      // (the server only lets users with close permission submit). Multi-
+      // cashier profiles keep each cashier's own session.
+      const ownEntry =
+        posProfile.multiple_cashier === 1
+          ? openEntries.find((entry) => entry.user === user.name) ?? null
+          : openEntries[0] ?? null;
 
       if (!ownEntry) {
         setOpeningEntry(null);
@@ -252,7 +258,8 @@ const POSClosingDialog = ({ open, onOpenChange, onClosingSubmitted }: POSClosing
       const [invoices, openingDoc] = await Promise.all([
         subCashier
           ? getSubCashierPosInvoices(ownEntry.period_start_date, end, posProfile.name, user.name)
-          : getMainCashierPosInvoices(ownEntry.period_start_date, end, posProfile.name, user.name),
+          // Paid orders of the shift are owned by the shift's user.
+          : getMainCashierPosInvoices(ownEntry.period_start_date, end, posProfile.name, ownEntry.user),
         db.getDoc<OpeningEntryDoc>('POS Opening Entry', ownEntry.name),
       ]);
 
@@ -383,7 +390,7 @@ const POSClosingDialog = ({ open, onOpenChange, onClosingSubmitted }: POSClosing
           const doc = await createPosClosingEntry({
             pos_profile: posProfile.name,
             pos_opening_entry: openingEntry.name,
-            user: user.name,
+            user: openingEntry.user || user.name,
             company: posProfile.company,
             period_start_date: openingEntry.period_start_date,
             period_end_date: formatDateTime(periodEndDate),

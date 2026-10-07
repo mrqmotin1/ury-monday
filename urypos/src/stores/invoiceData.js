@@ -15,7 +15,7 @@ import {
   loadQzPrinter,
   disconnectQzPrinter,
 } from "./utils/PrintWithQz";
-import { startQzPrintJobListener } from "./utils/qzPrintJobs";
+import { startQzPrintJobListener, startShiftListener } from "./utils/qzPrintJobs";
 
 export const useInvoiceDataStore = defineStore("invoiceData", {
   state: () => ({
@@ -94,6 +94,12 @@ export const useInvoiceDataStore = defineStore("invoiceData", {
           this.enableKotReprint=this.invoiceDetails.enable_kot_reprint;
           this.multipleCashier=this.invoiceDetails.multiple_cashier
           this.editOrderType=this.invoiceDetails.edit_order_type
+          // Shared shift closed on another device -> back to the opening step.
+          startShiftListener(this.branch, this.posProfile, (closedBy) => {
+            this.alert
+              .createAlert("Message", `POS shift was closed${closedBy ? ` by ${closedBy}` : ""}. Open a new shift to continue.`, "OK")
+              .then(() => window.location.reload());
+          }).catch((err) => console.error("[POS] Shift listener failed:", err));
           if (this.print_type === "qz") {
             // Warm up the QZ connection; failures surface when printing.
             loadQzPrinter(this.qz_host).catch((err) =>

@@ -30,7 +30,8 @@
     "close_shift": "Clôturer la session",
     "switch_to_desk": "Accéder au bureau",
     "clear_cache": "Vider le cache",
-    "logout": "Déconnexion"
+    "logout": "Déconnexion",
+    "counter": "Comptoir"
   },
   "menu": {
     "special_items": "Plats spéciaux"
@@ -417,5 +418,8 @@
     "max_note": "Maximum autorisé : {{max}} %",
     "printed_note": "L'addition est déjà imprimée. Seul un responsable peut modifier la remise, et l'addition doit être réimprimée avant le paiement.",
     "button": "Remise"
+  },
+  "shift": {
+    "closed_by": "La session a été fermée par {{name}}. Ouvrez une nouvelle session pour continuer."
   }
 }
