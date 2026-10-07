@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { v4 as uuidv4 } from 'uuid';
-import { storage, getCurrencyCode } from '@ury/core';
+import { storage, getCurrencyCode, call } from '@ury/core';
 import { getRestaurantMenu, getAggregatorMenu, MenuItem as APIMenuItem } from '../lib/menu-api';
 import { getCurrencyInfo, PosProfileCombined, getCombinedPosProfile } from '../lib/pos-profile-api';
 import { getMenuCourses } from '../lib/menu-course-api';
@@ -112,6 +112,8 @@ interface POSState {
   selectedRoom: string | null;
   searchQuery: string;
   selectedCustomer: Customer | null;
+  /** POS Profile's Customer: preselected on every new order. */
+  defaultCustomer: Customer | null;
   selectedOrderType: OrderType;
   quickFilter: 'all' | 'special';
   selectedItem: MenuItem | null;
@@ -163,6 +165,7 @@ interface POSStore extends POSState {
   setSelectedCategory: (category: string) => void;
   setSearchQuery: (query: string) => void;
   setSelectedCustomer: (customer: Customer | null) => void;
+  loadDefaultCustomer: (customerId?: string | null) => Promise<void>;
   setSelectedTable: (table: string | null, room: string | null, doNotLoadOrder?: boolean) => void;
   setSelectedOrderType: (type: OrderType) => void;
   setQuickFilter: (filter: 'all' | 'special') => void;
@@ -323,6 +326,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   orderId: null,
   showVoluntaryClosing: false,
   canCloseShift: false,
+  defaultCustomer: null,
   orderComment: '',
   noOfPax: 1,
   lastModifiedTime: null,
@@ -368,6 +372,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
           profileLoading: false,
         });
         await get().syncCurrency(profile.currency);
+        await get().loadDefaultCustomer(profile.customer);
         return;
       }
 
@@ -380,6 +385,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
         profileLoading: false,
       });
       await get().syncCurrency(combinedProfile.currency);
+      await get().loadDefaultCustomer(combinedProfile.customer);
     } catch (error) {
       console.error('Error fetching POS profile:', error);
       set({ 
@@ -585,6 +591,35 @@ export const usePOSStore = create<POSStore>((set, get) => ({
   setSelectedCategory: (category) => set({ selectedCategory: category }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
+
+  // POS Profile's Customer becomes the preselected customer of new orders.
+  // Cashiers can still change it or add a new one per order.
+  loadDefaultCustomer: async (customerId) => {
+    if (!customerId) {
+      set({ defaultCustomer: null });
+      return;
+    }
+    try {
+      const res = await call.get('frappe.client.get_value', {
+        doctype: 'Customer',
+        filters: customerId,
+        fieldname: JSON.stringify(['customer_name', 'mobile_number']),
+      });
+      const values = res?.message || {};
+      const defaultCustomer: Customer = {
+        id: customerId,
+        name: values.customer_name || customerId,
+        phone: values.mobile_number || '',
+      };
+      set({ defaultCustomer });
+      // Apply to the order being built if nothing is chosen yet.
+      const { selectedCustomer, isUpdatingOrder } = get();
+      if (!selectedCustomer && !isUpdatingOrder) set({ selectedCustomer: defaultCustomer });
+    } catch (error) {
+      console.error('Failed to load POS Profile default customer:', error);
+      set({ defaultCustomer: null });
+    }
+  },
   setSelectedTable: (table: string | null, room: string | null, doNotLoadOrder: boolean = false) => {
     set({ selectedTable: table, selectedRoom: room });
     if (table ) {
@@ -785,7 +820,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
         set({
           tableOrder: null,
           activeOrders: [],
-          selectedCustomer: null,
+          selectedCustomer: get().defaultCustomer,
           isUpdatingOrder: false,
           orderId: null,
           noOfPax: 1,
@@ -814,7 +849,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
     set({
       tableOrder: null,
       activeOrders: [],
-      selectedCustomer: null,
+      selectedCustomer: get().defaultCustomer,
       isUpdatingOrder: false,
       orderId: null,
       noOfPax: 1,
@@ -869,7 +904,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
         heldTabs: {},
         nextTabNumber: 2,
         activeOrders: [],
-        selectedCustomer: null,
+        selectedCustomer: get().defaultCustomer,
         selectedOrderType: DEFAULT_ORDER_TYPE,
         selectedTable: null,
         selectedRoom: null,
@@ -911,7 +946,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
       nextTabNumber: state.nextTabNumber + 1,
       heldTabs: { ...state.heldTabs, [state.activeTabId]: currentTabState },
       activeOrders: [],
-      selectedCustomer: null,
+      selectedCustomer: get().defaultCustomer,
       selectedOrderType: DEFAULT_ORDER_TYPE,
       selectedTable: null,
       selectedRoom: null,
@@ -994,7 +1029,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
         heldTabs: {},
         nextTabNumber: 2,
         activeOrders: [],
-        selectedCustomer: null,
+        selectedCustomer: get().defaultCustomer,
         selectedOrderType: DEFAULT_ORDER_TYPE,
         selectedTable: null,
         selectedRoom: null,
