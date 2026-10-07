@@ -6,7 +6,7 @@ app_publisher = "Tridz Technologies Pvt. Ltd"
 app_description = "A Complete Restaurant Order Taking Software"
 app_email = "info@tridz.com"
 app_license = "MIT"
-app_logo_url = "/assets/ury/images/monday-pos-icon.png"
+app_logo_url = "/assets/ury/Images/monday-pos-icon.png"
 app_icon_title = "Monday POS"
 required_apps = ["erpnext"]
 # Includes in <head>
@@ -14,7 +14,7 @@ required_apps = ["erpnext"]
 add_to_apps_screen = [
   {
     "name": "ury",
-    "logo": "/assets/ury/images/monday-pos-icon.png",
+    "logo": "/assets/ury/Images/monday-pos-icon.png",
     "title": "Monday POS",
     "route": "/ury",
     "has_permission": "ury.permission.check_app_permission"
@@ -52,7 +52,7 @@ doctype_js = {"POS Profile": "public/js/pos_profile_qz.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
 # Splash Image in Website Settings
-website_context = {"splash_image": "/assets/ury/images/monday-pos.svg"}
+website_context = {"splash_image": "/assets/ury/Images/monday-pos.svg"}
 
 website_route_rules = [
     {"from_route": "/urypos/<path:app_path>", "to_route": "urypos"},
@@ -188,7 +188,10 @@ doc_events = {
         },
     "Item": {"validate": "ury.ury.hooks.ury_item.validate"},
     "POS Opening Entry": {
-        "validate":"ury.ury.hooks.ury_pos_opening_entry.set_cashier_room",
+        "validate": [
+            "ury.ury.hooks.ury_pos_opening_entry.set_cashier_room",
+            "ury.ury.hooks.ury_pos_opening_entry.one_open_shift_per_profile",
+        ],
         "before_save": "ury.ury.hooks.ury_pos_opening_entry.before_save",
         "before_insert":"ury.ury.api.ury_kot_order_number.set_last_invoice_in_pos_open",
         "on_submit": "ury.ury.hooks.ury_pos_opening_entry.publish_shift_opened",

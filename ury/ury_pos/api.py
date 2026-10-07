@@ -1068,6 +1068,7 @@ def get_open_pos_opening_entries(pos_profile):
             "docstatus": 1,
         },
         fields=["name", "period_start_date", "user", "pos_profile"],
+        order_by="period_start_date desc",
     )
 
 

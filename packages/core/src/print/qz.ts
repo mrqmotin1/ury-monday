@@ -7,6 +7,10 @@ import { call } from '../frappe/client';
 // configured certificate QZ runs in anonymous mode and asks the user to Allow.
 
 let connectedHost: string | null = null;
+// In-flight connect, shared so concurrent prints (several KOTs from one order,
+// a waiter slip, a bill) wait for it instead of opening a second socket --
+// QZ rejects a connect() while another is still pending.
+let connecting: Promise<void> | null = null;
 let certificatePromise: Promise<string | null> | null = null;
 let securityConfigured = false;
 
@@ -51,14 +55,26 @@ export async function loadQzPrinter(host: string): Promise<void> {
   configureSecurity();
   const targetHost = host || 'localhost';
 
+  if (connecting) {
+    await connecting;
+    if (qz.websocket.isActive() && connectedHost === targetHost) return;
+  }
+
   if (qz.websocket.isActive()) {
     if (connectedHost === targetHost) return;
     await qz.websocket.disconnect();
   }
 
-  // Browsers block ws:// to non-localhost hosts from https pages, so match the page.
-  await qz.websocket.connect({ host: targetHost, usingSecure: window.location.protocol === 'https:' });
-  connectedHost = targetHost;
+  connecting = (async () => {
+    // Browsers block ws:// to non-localhost hosts from https pages, so match the page.
+    await qz.websocket.connect({ host: targetHost, usingSecure: window.location.protocol === 'https:' });
+    connectedHost = targetHost;
+  })();
+  try {
+    await connecting;
+  } finally {
+    connecting = null;
+  }
 }
 
 export function disconnectQzPrinter(): void {

@@ -3,8 +3,8 @@
     {
      "docstatus": 0,
      "doctype": "Custom HTML Block",
-     "html":"<a href=\"/pos\" aria-label=\"Monday POS\">\n    <img class=\"uryposlogo\" src=\"/assets/ury/images/monday-pos.svg\" alt=\"Monday POS\"/>\n</a>",
-     "modified": "2026-10-06 18:00:00.000000",
+     "html":"<a href=\"/pos\" aria-label=\"Monday POS\">\n    <img class=\"uryposlogo\" src=\"/assets/ury/Images/monday-pos.svg\" alt=\"Monday POS\"/>\n</a>",
+     "modified": "2026-10-07 16:00:00.000000",
      "name": "URY POS",
      "private": 0,
      "roles": [],
@@ -25,8 +25,8 @@
     {
      "docstatus": 0,
      "doctype": "Custom HTML Block",
-     "html": "<a href=\"/mosaic\" aria-label=\"Monday POS Kitchen\">\n    <img class=\"uryposlogo\" src=\"/assets/ury/images/monday-pos-kitchen.svg\" alt=\"Monday Kitchen\"/>\n</a>",
-     "modified": "2026-10-07 14:30:00.000000",
+     "html": "<a href=\"/mosaic\" aria-label=\"Monday POS Kitchen\">\n    <img class=\"uryposlogo\" src=\"/assets/ury/Images/monday-pos-kitchen.svg\" alt=\"Monday Kitchen\"/>\n</a>",
+     "modified": "2026-10-07 16:00:00.000000",
      "name": "Monday POS Kitchen",
      "private": 0,
      "roles": [],

@@ -71,3 +71,37 @@ def publish_shift_opened(doc, method):
         {"event": "opened", "pos_profile": doc.pos_profile, "opening_entry": doc.name, "user": doc.user},
         after_commit=True,
     )
+
+
+def one_open_shift_per_profile(doc, method):
+    """Single-cashier POS Profiles share ONE open shift (every terminal on the
+    profile joins it). Block a second open shift for the same profile from any
+    entry point (URY POS, desk, ERPNext POS). Different profiles each keep
+    their own shift. The POS Profile row lock serializes two terminals that
+    press Open at the same moment."""
+    from ury.ury_pos.api import is_shared_shift_profile
+
+    if doc.docstatus != 1 or not is_shared_shift_profile(doc.pos_profile):
+        return
+
+    frappe.db.get_value("POS Profile", doc.pos_profile, "name", for_update=True)
+    other = frappe.db.get_value(
+        "POS Opening Entry",
+        {
+            "pos_profile": doc.pos_profile,
+            "status": "Open",
+            "docstatus": 1,
+            "name": ["!=", doc.name],
+        },
+        ["name", "user"],
+        as_dict=True,
+    )
+    if other:
+        frappe.throw(
+            frappe._("A shift ({0}) is already open on {1} (opened by {2}). Continue on that shift or close it first.").format(
+                other.name,
+                doc.pos_profile,
+                frappe.db.get_value("User", other.user, "full_name") or other.user,
+            ),
+            title=frappe._("Shift already open"),
+        )
