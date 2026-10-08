@@ -102,6 +102,12 @@ function SetupGuard() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  // The organization step (ERPNext setup) runs once; with a Company in place
+  // it can't be submitted again, so send step 0 on to the restaurant step.
+  if (status.step1_complete && window.location.pathname.startsWith('/ury/setup-wizard/0')) {
+    return <Navigate to="/setup-wizard/1" replace />;
+  }
+
   return <Outlet />;
 }
 

@@ -304,6 +304,15 @@ function ConfigurePageContent() {
           <Button
             type="button"
             variant="ghost"
+            onClick={() => { window.location.href = '/app'; }}
+            disabled={finishing}
+          >
+            Configure later in Desk
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
             onClick={handleFinish}
             disabled={finishing}
           >
