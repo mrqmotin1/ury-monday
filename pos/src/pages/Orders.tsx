@@ -767,7 +767,10 @@ export default function Orders() {
                   <Button
                     className="flex-1"
                     onClick={() => {
-                      if (String(selectedOrder.invoice_printed) === '0') {
+                      if (
+                        String(selectedOrder.invoice_printed) === '0' &&
+                        !posStore.posProfile?.custom_allow_payment_without_print
+                      ) {
                         showToast.error(t('errors.please_print_first'));
                         return;
                       }

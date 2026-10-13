@@ -115,7 +115,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-07 14:00:00.000000",
+ "modified": "2026-10-13 11:39:16.215362",
  "modified_by": "Administrator",
  "module": "URY",
  "name": "URY",
@@ -135,7 +135,7 @@
    "role": "URY Cashier"
   }
  ],
- "sequence_id": 31.0,
+ "sequence_id": 1.0,
  "shortcuts": [],
  "title": "URY"
 }

@@ -134,6 +134,12 @@ def calculate_and_set_times(doc, method):
 
 
 def validate_invoice_print(doc, method):
+    # POS Profile can allow payment for any order without printing the bill
+    if doc.pos_profile and frappe.db.get_value(
+        "POS Profile", doc.pos_profile, "custom_allow_payment_without_print"
+    ):
+        return
+
     # Check if the invoice has been printed
     invoice_printed = frappe.db.get_value("POS Invoice", doc.name, "invoice_printed")
 

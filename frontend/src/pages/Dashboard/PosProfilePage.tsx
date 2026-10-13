@@ -22,6 +22,7 @@ interface PosProfileRecord {
   custom_qz_waiter_slip_format?: string;
   custom_enable_discount?: number;
   custom_max_discount_percentage?: number;
+  custom_allow_payment_without_print?: number;
   custom_multiple_cashier_configuration?: number;
   custom_enable_kot_reprint?: number;
   custom_daily_pos_close?: number;
@@ -268,6 +269,7 @@ export const PosProfilePage: React.FC = () => {
         custom_qz_waiter_slip_format: profile.custom_qz_waiter_slip_format || '',
         custom_enable_discount: profile.custom_enable_discount || 0,
         custom_max_discount_percentage: profile.custom_max_discount_percentage || '',
+        custom_allow_payment_without_print: profile.custom_allow_payment_without_print || 0,
         custom_enable_kot_reprint: profile.custom_enable_kot_reprint || 0,
         custom_multiple_cashier_configuration: profile.custom_multiple_cashier_configuration || 0,
         custom_daily_pos_close: profile.custom_daily_pos_close || 0,
@@ -324,6 +326,7 @@ export const PosProfilePage: React.FC = () => {
         custom_qz_waiter_slip_format: form.custom_qz_waiter_slip_format || '',
         custom_enable_discount: form.custom_enable_discount ? 1 : 0,
         custom_max_discount_percentage: form.custom_max_discount_percentage || '',
+        custom_allow_payment_without_print: form.custom_allow_payment_without_print ? 1 : 0,
         custom_enable_kot_reprint: form.custom_enable_kot_reprint ? 1 : 0,
         custom_multiple_cashier_configuration: form.custom_multiple_cashier_configuration ? 1 : 0,
         custom_daily_pos_close: form.custom_daily_pos_close ? 1 : 0,
@@ -365,6 +368,7 @@ export const PosProfilePage: React.FC = () => {
           custom_qz_waiter_slip_format: profileForm.custom_qz_waiter_slip_format || '',
           custom_enable_discount: profileForm.custom_enable_discount,
           custom_max_discount_percentage: profileForm.custom_max_discount_percentage || 0,
+          custom_allow_payment_without_print: profileForm.custom_allow_payment_without_print ? 1 : 0,
           custom_enable_kot_reprint: profileForm.custom_enable_kot_reprint,
           custom_multiple_cashier_configuration: profileForm.custom_multiple_cashier_configuration,
           custom_daily_pos_close: profileForm.custom_daily_pos_close,
@@ -559,6 +563,7 @@ export const PosProfilePage: React.FC = () => {
                       { key: 'custom_daily_pos_close', label: 'Require Daily POS Closing' },
                       { key: 'custom_edit_order_type', label: 'Enable Order Type Edit' },
                       { key: 'custom_reset_order_number_daily', label: 'Reset Order Number Daily' },
+                      { key: 'custom_allow_payment_without_print', label: 'Allow Payment Without Printing Bill' },
                     ].map(({ key, label }) => (
                       <div key={key} className="flex items-center gap-2 p-3 rounded-lg border border-gray-100 bg-gray-50/50">
                         <Switch

@@ -89,6 +89,7 @@ export interface PosProfileCombined extends PosProfileFull {
   edit_order_type?: number;
   view_all_status?: number;
   custom_daily_pos_close?: number;
+  custom_allow_payment_without_print?: number;
 }
 
 export interface Currency {
